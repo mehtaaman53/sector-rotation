@@ -14,25 +14,25 @@ import pandas as pd
 
 BENCH = "^NSEI"
 # naam, Yahoo ticker, niftyindices constituents file
-SECTORS = [
-    ("IT",           "^CNXIT",               "ind_niftyitlist.csv"),
-    ("Bank",         "^NSEBANK",             "ind_niftybanklist.csv"),
-    ("Pvt Bank",     "NIFTY_PVT_BANK.NS",    "ind_nifty_privatebanklist.csv"),
-    ("PSU Bank",     "^CNXPSUBANK",          "ind_niftypsubanklist.csv"),
-    ("Fin Services", "NIFTY_FIN_SERVICE.NS", "ind_niftyfinancelist.csv"),
-    ("Auto",         "^CNXAUTO",             "ind_niftyautolist.csv"),
-    ("Pharma",       "^CNXPHARMA",           "ind_niftypharmalist.csv"),
-    ("Healthcare",   "NIFTY_HEALTHCARE.NS",  "ind_niftyhealthcarelist.csv"),
-    ("FMCG",         "^CNXFMCG",             "ind_niftyfmcglist.csv"),
-    ("Metal",        "^CNXMETAL",            "ind_niftymetallist.csv"),
-    ("Realty",       "^CNXREALTY",           "ind_niftyrealtylist.csv"),
-    ("Energy",       "^CNXENERGY",           "ind_niftyenergylist.csv"),
-    ("Oil & Gas",    "NIFTY_OIL_AND_GAS.NS", "ind_niftyoilgaslist.csv"),
-    ("Infra",        "^CNXINFRA",            "ind_niftyinfralist.csv"),
-    ("PSE",          "^CNXPSE",              "ind_niftypselist.csv"),
-    ("Media",        "^CNXMEDIA",            "ind_niftymedialist.csv"),
-    ("Consumption",  "^CNXCONSUM",           "ind_niftyconsumptionlist.csv"),
-    ("Defence",      "NIFTY_IND_DEFENCE.NS", "ind_niftyindiadefence_list.csv"),
+SECTORS = [  # naam, Yahoo tickers ("|" = pehla na mile to agla try), constituents file
+    ("IT",           "^CNXIT|NIFTY_IT.NS",                     "ind_niftyitlist.csv"),
+    ("Bank",         "^NSEBANK|NIFTY_BANK.NS",                 "ind_niftybanklist.csv"),
+    ("Pvt Bank",     "NIFTY_PVT_BANK.NS|^NIFTYPVTBANK",        "ind_nifty_privatebanklist.csv"),
+    ("PSU Bank",     "^CNXPSUBANK|NIFTY_PSU_BANK.NS",          "ind_niftypsubanklist.csv"),
+    ("Fin Services", "NIFTY_FIN_SERVICE.NS|^CNXFIN",           "ind_niftyfinancelist.csv"),
+    ("Auto",         "^CNXAUTO|NIFTY_AUTO.NS",                 "ind_niftyautolist.csv"),
+    ("Pharma",       "^CNXPHARMA|NIFTY_PHARMA.NS",             "ind_niftypharmalist.csv"),
+    ("Healthcare",   "NIFTY_HEALTHCARE.NS|^CNXHEALTH",         "ind_niftyhealthcarelist.csv"),
+    ("FMCG",         "^CNXFMCG|NIFTY_FMCG.NS",                 "ind_niftyfmcglist.csv"),
+    ("Metal",        "^CNXMETAL|NIFTY_METAL.NS",               "ind_niftymetallist.csv"),
+    ("Realty",       "^CNXREALTY|NIFTY_REALTY.NS",             "ind_niftyrealtylist.csv"),
+    ("Energy",       "^CNXENERGY|NIFTY_ENERGY.NS",             "ind_niftyenergylist.csv"),
+    ("Oil & Gas",    "NIFTY_OIL_AND_GAS.NS|^CNXOILGAS",        "ind_niftyoilgaslist.csv"),
+    ("Infra",        "^CNXINFRA|NIFTY_INFRA.NS",               "ind_niftyinfralist.csv"),
+    ("PSE",          "^CNXPSE|NIFTY_PSE.NS",                   "ind_niftypselist.csv"),
+    ("Media",        "^CNXMEDIA|NIFTY_MEDIA.NS",               "ind_niftymedialist.csv"),
+    ("Consumption",  "^CNXCONSUM|NIFTY_CONSUMPTION.NS",        "ind_niftyconsumptionlist.csv"),
+    ("Defence",      "NIFTY_IND_DEFENCE.NS|^CNXDEFENCE",       "ind_niftyindiadefence_list.csv"),
 ]
 RS_LEN, MOM_LEN, SMOOTH, TREND_LEN, PERF_LEN, TAIL = 10, 4, 3, 40, 13, 8
 PHASE = {1: "LEADING", 2: "WEAKENING", 3: "LAGGING", 4: "IMPROVING", 0: "NO DATA"}
@@ -41,12 +41,57 @@ OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "docs")
 
 
 # ── Data ─────────────────────────────────────────────────────────────
-def fetch_prices(tickers, period="3y"):
-    import yfinance as yf
-    df = yf.download(tickers, period=period, interval="1d", auto_adjust=True,
-                     progress=False, group_by="column", threads=True)
-    close = df["Close"] if isinstance(df.columns, pd.MultiIndex) else df[["Close"]].rename(columns={"Close": tickers[0]})
-    return close.dropna(how="all")
+def _close(df, tickers):
+    if df is None or df.empty:
+        return pd.DataFrame()
+    if isinstance(df.columns, pd.MultiIndex):
+        return df["Close"]
+    return df[["Close"]].rename(columns={"Close": tickers[0]})
+
+
+def fetch_prices(tickers, period="3y", chunk=60):
+    """Stocks ko chhote batches mein laata hai (Yahoo zyada ek saath mein atakta hai)."""
+    import yfinance as yf, time
+    parts = []
+    for i in range(0, len(tickers), chunk):
+        part = tickers[i:i + chunk]
+        for attempt in range(2):
+            try:
+                df = yf.download(part, period=period, interval="1d", auto_adjust=True,
+                                 progress=False, group_by="column", threads=True)
+                parts.append(_close(df, part))
+                break
+            except Exception as e:
+                print(f"  batch fail ({e}), retry")
+                time.sleep(5)
+        time.sleep(2)
+    out = pd.concat(parts, axis=1) if parts else pd.DataFrame()
+    return out.loc[:, ~out.columns.duplicated()].dropna(how="all")
+
+
+def fetch_index(cands, period="3y"):
+    """Har candidate ticker try karo; jiska 1 saal+ data mile wahi lo."""
+    import yfinance as yf, time
+    for t in cands.split("|"):
+        try:
+            h = yf.Ticker(t).history(period=period, interval="1d", auto_adjust=True)
+            c = h["Close"].dropna()
+            if len(c) >= 260:
+                c.index = c.index.tz_localize(None).normalize()
+                return t, c
+        except Exception as e:
+            print(f"  {t}: {e}")
+        time.sleep(1)
+    return None, None
+
+
+def synthetic_index(px):
+    """Index ka data na mile to sector ke stocks ka equal-weight index bana lo."""
+    rets = px.ffill().pct_change(fill_method=None)
+    rets = rets.loc[:, px.notna().sum() >= 260]
+    if rets.shape[1] < 3:
+        return None
+    return 1000 * (1 + rets.mean(axis=1).fillna(0)).cumprod()
 
 
 def fetch_constituents(fname):
@@ -71,6 +116,7 @@ def demo_data():
     cons = {}
     for k, (name, tk, _) in enumerate(SECTORS):
         drift = np.sin(np.linspace(0, 3 + k * 0.4, len(idx)) + k) * 0.0012
+        tk = "SEC::" + name
         data[tk] = bench * np.exp(np.cumsum(drift + rng.normal(0, 0.006, len(idx))))
         cons[name] = []
         for j in range(6):
@@ -99,7 +145,8 @@ def analyse(daily, cons_map):
     weekly = daily.resample("W-FRI").last()
     bw = weekly[BENCH]
     sectors = []
-    for name, tk, _ in SECTORS:
+    for name, _, _ in SECTORS:
+        tk = "SEC::" + name
         if tk not in weekly or weekly[tk].dropna().size < RS_LEN + MOM_LEN + 5:
             print(f"  skip {name} ({tk}) — data nahi mila")
             continue
@@ -197,18 +244,39 @@ def send_telegram(text):
 # ── Main ─────────────────────────────────────────────────────────────
 def main():
     demo = "--demo" in sys.argv
+    status = {"indices": {}, "constituents": {}}
     if demo:
         daily, cons_map = demo_data()
     else:
+        import yfinance as yf
         cons_map = {name: fetch_constituents(f) for name, _, f in SECTORS}
+        status["constituents"] = {k: len(v) for k, v in cons_map.items()}
         all_stocks = sorted({s for v in cons_map.values() for s in v})
-        tickers = [BENCH] + [tk for _, tk, _ in SECTORS] + all_stocks
-        print(f"Downloading {len(tickers)} tickers…")
-        daily = fetch_prices(tickers)
+        print(f"Downloading {len(all_stocks)} stocks…")
+        stocks = fetch_prices(all_stocks)
+        stocks.index = pd.to_datetime(stocks.index).tz_localize(None).normalize()
+        _, bench = fetch_index(BENCH)
+        cols = {BENCH: bench}
+        for name, cands, _ in SECTORS:
+            used, c = fetch_index(cands)
+            if c is None:
+                syms = [x for x in cons_map.get(name, []) if x in stocks]
+                c = synthetic_index(stocks[syms]) if syms else None
+                used = "equal-weight stocks" if c is not None else None
+            status["indices"][name] = used or "FAILED"
+            print(f"  {name}: {status['indices'][name]}")
+            if c is not None:
+                cols["SEC::" + name] = c
+        idx_df = pd.DataFrame(cols)
+        daily = idx_df.join(stocks, how="left")
+        daily = daily[daily[BENCH].notna()]
     res = analyse(daily, cons_map)
     os.makedirs(OUT, exist_ok=True)
     with open(os.path.join(OUT, "data.json"), "w") as f:
         json.dump(res, f, indent=1)
+    status["sectors_ok"] = len(res["sectors"])
+    with open(os.path.join(OUT, "status.json"), "w") as f:
+        json.dump(status, f, indent=1)
     tpl = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "dashboard_template.html"), encoding="utf-8").read()
     with open(os.path.join(OUT, "index.html"), "w", encoding="utf-8") as f:
         f.write(tpl.replace("/*__DATA__*/null", json.dumps(res)))
