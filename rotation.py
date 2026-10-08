@@ -227,18 +227,34 @@ def alert_text(res, url=""):
 
 
 def send_telegram(text):
+    """Telegram pe bhejo; result (bina token ke) status mein wapas do."""
     import requests
-    tok, chat = os.environ.get("TELEGRAM_BOT_TOKEN"), os.environ.get("TELEGRAM_CHAT_ID")
+    tok = (os.environ.get("TELEGRAM_BOT_TOKEN") or "").strip().replace(" ", "")
+    chat = (os.environ.get("TELEGRAM_CHAT_ID") or "").strip().replace(" ", "")
+    info = {"token_set": bool(tok), "chat_set": bool(chat),
+            "token_shape_ok": bool(tok) and ":" in tok and tok.split(":")[0].isdigit()}
     if not tok or not chat:
         print("Telegram secrets nahi mile — alert skip.")
-        return
-    r = requests.post(f"https://api.telegram.org/bot{tok}/sendMessage",
-                      data={"chat_id": chat, "text": text, "parse_mode": "Markdown",
-                            "disable_web_page_preview": "true"}, timeout=30)
-    if r.status_code != 200:  # Markdown me koi ajeeb character ho to plain text bhejo
+        return info
+    try:
+        me = requests.get(f"https://api.telegram.org/bot{tok}/getMe", timeout=20).json()
+        info["getMe_ok"] = me.get("ok"); info["bot"] = (me.get("result") or {}).get("username")
+        if not me.get("ok"):
+            info["getMe_error"] = me.get("description")
         r = requests.post(f"https://api.telegram.org/bot{tok}/sendMessage",
-                          data={"chat_id": chat, "text": text.replace("*", "").replace("_", "")}, timeout=30)
-    print("Telegram:", r.status_code, r.text[:200])
+                          data={"chat_id": chat, "text": text, "parse_mode": "Markdown",
+                                "disable_web_page_preview": "true"}, timeout=30)
+        if r.status_code != 200:  # Markdown me koi ajeeb character ho to plain text bhejo
+            info["markdown_error"] = r.json().get("description")
+            r = requests.post(f"https://api.telegram.org/bot{tok}/sendMessage",
+                              data={"chat_id": chat, "text": text.replace("*", "").replace("_", "")}, timeout=30)
+        info["send_status"] = r.status_code
+        if r.status_code != 200:
+            info["send_error"] = r.json().get("description")
+    except Exception as e:
+        info["exception"] = str(e)[:200].replace(tok, "***")
+    print("Telegram:", info)
+    return info
 
 
 # ── Main ─────────────────────────────────────────────────────────────
@@ -283,7 +299,9 @@ def main():
     msg = alert_text(res, os.environ.get("DASHBOARD_URL", ""))
     print(msg)
     if not demo and "--no-alert" not in sys.argv:
-        send_telegram(msg)
+        status["telegram"] = send_telegram(msg)
+        with open(os.path.join(OUT, "status.json"), "w") as f:
+            json.dump(status, f, indent=1)
 
 
 if __name__ == "__main__":
