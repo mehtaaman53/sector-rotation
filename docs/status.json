@@ -44,11 +44,8 @@
   "token_set": true,
   "chat_set": true,
   "token_shape_ok": true,
-  "getMe_ok": false,
-  "bot": null,
-  "getMe_error": "Unauthorized",
-  "markdown_error": "Unauthorized",
-  "send_status": 401,
-  "send_error": "Unauthorized"
+  "getMe_ok": true,
+  "bot": "SectorRotateBot",
+  "send_status": 200
  }
 }
