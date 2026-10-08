@@ -1,0 +1,43 @@
+{
+ "indices": {
+  "IT": "^CNXIT",
+  "Bank": "^NSEBANK",
+  "Pvt Bank": "equal-weight stocks",
+  "PSU Bank": "equal-weight stocks",
+  "Fin Services": "equal-weight stocks",
+  "Auto": "equal-weight stocks",
+  "Pharma": "^CNXPHARMA",
+  "Healthcare": "equal-weight stocks",
+  "FMCG": "equal-weight stocks",
+  "Metal": "equal-weight stocks",
+  "Realty": "equal-weight stocks",
+  "Energy": "equal-weight stocks",
+  "Oil & Gas": "equal-weight stocks",
+  "Infra": "equal-weight stocks",
+  "PSE": "equal-weight stocks",
+  "Media": "equal-weight stocks",
+  "Consumption": "equal-weight stocks",
+  "Defence": "equal-weight stocks"
+ },
+ "constituents": {
+  "IT": 10,
+  "Bank": 14,
+  "Pvt Bank": 10,
+  "PSU Bank": 12,
+  "Fin Services": 20,
+  "Auto": 15,
+  "Pharma": 20,
+  "Healthcare": 20,
+  "FMCG": 15,
+  "Metal": 15,
+  "Realty": 10,
+  "Energy": 40,
+  "Oil & Gas": 15,
+  "Infra": 30,
+  "PSE": 20,
+  "Media": 10,
+  "Consumption": 30,
+  "Defence": 22
+ },
+ "sectors_ok": 18
+}
