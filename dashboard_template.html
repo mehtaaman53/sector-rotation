@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sector Rotation – Trade Tribe</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.35.2/plotly.min.js"></script>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--fg:#14171f;--mut:#667085;--line:#e4e7ec;
+--lead:#16a34a;--imp:#2563eb;--weak:#d97706;--lag:#dc2626}
+@media (prefers-color-scheme:dark){:root{--bg:#0d1117;--card:#161b22;--fg:#e6edf3;--mut:#8b949e;--line:#30363d}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.45 -apple-system,Segoe UI,Roboto,sans-serif}
+.wrap{max-width:980px;margin:0 auto;padding:16px}
+h1{font-size:20px;margin:4px 0}.sub{color:var(--mut);font-size:13px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:14px 0}
+.ph{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;border-top:4px solid}
+.ph b{display:block;font-size:13px;letter-spacing:.04em}.ph span{color:var(--mut);font-size:12px}
+.ph ul{margin:6px 0 0;padding-left:16px;font-size:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;margin:12px 0}
+#rrg{width:100%;height:420px}
+table{width:100%;border-collapse:collapse;font-size:13.5px}th,td{padding:7px 6px;border-bottom:1px solid var(--line);text-align:left}
+th{color:var(--mut);font-weight:600}.pill{display:inline-block;padding:2px 8px;border-radius:99px;color:#fff;font-size:12px;font-weight:600}
+.pos{color:var(--lead)}.neg{color:var(--lag)}.tops{color:var(--mut);font-size:12.5px}
+.row{padding:10px 0;border-bottom:1px solid var(--line)}.rh{display:flex;justify-content:space-between;align-items:center}.m{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:13px;color:var(--mut);margin-top:4px}.m b{color:var(--fg)}.tops{margin-top:4px}.help{font-size:13px;color:var(--mut)}
+</style>
+</head>
+<body><div class="wrap">
+<h1>📊 Sector Rotation — The Trade Tribe</h1>
+<div class="sub" id="asof"></div>
+<div class="grid" id="phases"></div>
+<div class="card"><b>Rotation chart (RRG)</b><div class="help">Sectors ghadi ki ulti disha mein ghoomte hain: 🔵 Improving → 🟢 Leading → 🟡 Weakening → 🔴 Lagging. Line = pichhle 8 hafte ka safar, bada dot = abhi.</div><div id="rrg"></div></div>
+<div class="card"><b>Sab sectors</b><div id="tbl"></div>
+<div class="help">RS &gt; 100 = Nifty se strong · Mom &gt; 100 = taqat badh rahi hai · Breadth = sector ke kitne % stocks 50 DMA ke upar · Top stocks = RS ke hisaab se sabse strong (✓ = 50 DMA ke upar)</div></div>
+</div>
+<script>
+const D=/*__DATA__*/null;
+const C={1:"#16a34a",2:"#d97706",3:"#dc2626",4:"#2563eb",0:"#888"};
+const N={1:"LEADING",2:"WEAKENING",3:"LAGGING",4:"IMPROVING",0:"NO DATA"};
+const E={1:"🟢",2:"🟡",3:"🔴",4:"🔵",0:"⚪"};
+document.getElementById("asof").textContent=`Week ending ${D.asof} · updated ${D.generated}`;
+const ph=document.getElementById("phases");
+[1,4,2,3].forEach(p=>{const s=D.sectors.filter(x=>x.phase===p);
+ ph.insertAdjacentHTML("beforeend",`<div class="ph" style="border-top-color:${C[p]}"><b>${E[p]} ${N[p]}</b><span>${s.length} sectors</span><ul>${s.map(x=>`<li>${x.name}${x.prev_phase!==x.phase&&x.prev_phase?" <small>(new)</small>":""}</li>`).join("")||"<li>—</li>"}</ul></div>`)});
+const dark=matchMedia("(prefers-color-scheme:dark)").matches,fg=dark?"#e6edf3":"#14171f",gr=dark?"#30363d":"#e4e7ec";
+const tr=[];D.sectors.forEach(s=>{const x=s.tail.map(t=>t[0]),y=s.tail.map(t=>t[1]);
+ tr.push({x,y,mode:"lines",line:{color:C[s.phase],width:1.5},hoverinfo:"skip",showlegend:false});
+ tr.push({x:[x.at(-1)],y:[y.at(-1)],mode:"markers+text",text:[s.name],textposition:"top center",textfont:{size:10,color:fg},marker:{size:10,color:C[s.phase]},showlegend:false,hovertemplate:`${s.name}<br>RS %{x:.1f}<br>Mom %{y:.1f}<extra></extra>`})});
+const xs=D.sectors.flatMap(s=>s.tail.map(t=>t[0])),ys=D.sectors.flatMap(s=>s.tail.map(t=>t[1]));
+const dx=Math.max(...xs.map(v=>Math.abs(v-100)))*1.15||2,dy=Math.max(...ys.map(v=>Math.abs(v-100)))*1.15||2;
+const q=(x0,x1,y0,y1,c,t,tx,ty)=>[{type:"rect",x0,x1,y0,y1,fillcolor:c,opacity:.07,line:{width:0},layer:"below"}];
+const shapes=[...q(100,100+dx,100,100+dy,C[1]),...q(100,100+dx,100-dy,100,C[2]),...q(100-dx,100,100-dy,100,C[3]),...q(100-dx,100,100,100+dy,C[4])];
+const ann=[[100+dx*.95,100+dy*.95,"LEADING",1,"right"],[100+dx*.95,100-dy*.95,"WEAKENING",2,"right"],[100-dx*.95,100-dy*.95,"LAGGING",3,"left"],[100-dx*.95,100+dy*.95,"IMPROVING",4,"left"]].map(a=>({x:a[0],y:a[1],text:a[2],showarrow:false,font:{color:C[a[3]],size:11},xanchor:a[4]}));
+Plotly.newPlot("rrg",tr,{margin:{l:40,r:10,t:10,b:36},paper_bgcolor:"rgba(0,0,0,0)",plot_bgcolor:"rgba(0,0,0,0)",font:{color:fg},
+ xaxis:{title:"RS-Ratio",range:[100-dx,100+dx],gridcolor:gr,zeroline:false},yaxis:{title:"RS-Mom",range:[100-dy,100+dy],gridcolor:gr,zeroline:false},shapes,annotations:ann},{displayModeBar:false,responsive:true});
+document.getElementById("tbl").innerHTML=D.sectors.map(s=>`<div class="row"><div class="rh"><b>${s.name}</b><span class="pill" style="background:${C[s.phase]}">${N[s.phase]}</span></div>
+<div class="m"><span>RS <b>${s.ratio.toFixed(1)}</b></span><span>Mom <b>${s.mom.toFixed(1)}</b></span><span>3M <b class="${s.perf3m>=0?"pos":"neg"}">${s.perf3m>=0?"+":""}${s.perf3m.toFixed(1)}%</b></span><span>Trend <b class="${s.trend_up?"pos":"neg"}">${s.trend_up?"▲":"▼"}</b></span><span>Breadth <b>${s.breadth==null?"–":s.breadth+"%"}</b></span></div>
+${s.top.length?`<div class="tops">Top: ${s.top.map(t=>`${t.symbol} ${t.rs>=0?"+":""}${t.rs}${t.above50?" ✓":""}`).join(" · ")}</div>`:""}</div>`).join("");
+</script>
+</body></html>

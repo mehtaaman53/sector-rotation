@@ -1,0 +1,32 @@
+name: Weekly Sector Rotation
+
+on:
+  schedule:
+    - cron: "17 3 * * 6"   # Har Shanivar subah 8:47 IST (Friday close ke baad)
+  workflow_dispatch:        # "Run workflow" button se kabhi bhi manually chala sakte ho
+
+permissions:
+  contents: write
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - name: Sector rotation nikalo + Telegram alert bhejo
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          DASHBOARD_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
+        run: python rotation.py
+      - name: Dashboard save karo
+        run: |
+          git config user.name "sector-bot"
+          git config user.email "sector-bot@users.noreply.github.com"
+          git add docs
+          git commit -m "Weekly update $(date +%F)" || echo "No changes"
+          git push

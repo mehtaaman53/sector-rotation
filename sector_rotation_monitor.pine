@@ -1,0 +1,186 @@
+//@version=6
+// ════════════════════════════════════════════════════════════════════
+//  THE TRADE TRIBE — Sector Rotation Monitor (RRG-style)
+//  Kaise use karein:
+//   1) Koi bhi NSE chart kholo (jaise NIFTY), timeframe = 1W (weekly)
+//   2) Ye indicator add karo
+//   3) Alert banao → Condition: "Sector Rotation" → "Any alert() function call"
+//      → Once per bar close. Har Friday weekly close pe phone pe alert aayega.
+//  Phase ka matlab:
+//   🟢 LEADING   = Nifty se strong + aur strong ho raha hai  → yahan stocks dhundo
+//   🔵 IMPROVING = abhi weak, par taqat aa rahi hai          → watchlist (early entry)
+//   🟡 WEAKENING = strong hai, par speed kam ho rahi hai     → profit book / trail SL
+//   🔴 LAGGING   = Nifty se weak + aur weak                  → avoid
+// ════════════════════════════════════════════════════════════════════
+indicator("Trade Tribe – Sector Rotation Monitor", shorttitle = "Sector Rotation", overlay = false)
+
+// ── Settings ─────────────────────────────────────────────────────────
+benchSym  = input.symbol("NSE:NIFTY", "Benchmark", group = "Settings")
+rsLen     = input.int(10, "RS-Ratio length (bars)", minval = 2, group = "Settings")
+momLen    = input.int(4, "RS-Momentum lookback (bars)", minval = 1, group = "Settings")
+smoothLen = input.int(3, "Smoothing", minval = 1, group = "Settings")
+trendLen  = input.int(40, "Trend MA (40 weekly ≈ 200 DMA)", minval = 5, group = "Settings")
+perfLen   = input.int(13, "Return vs Nifty lookback (13 weekly ≈ 3 months)", minval = 1, group = "Settings")
+tablePosS = input.string("Top Right", "Table position", options = ["Top Right", "Middle Right", "Bottom Right", "Top Left", "Middle Left", "Bottom Left", "Top Center", "Bottom Center"], group = "Display")
+txtSizeS  = input.string("Small", "Text size", options = ["Tiny", "Small", "Normal"], group = "Display")
+aLead     = input.bool(true, "Alert: → LEADING", group = "Alerts")
+aImp      = input.bool(true, "Alert: Lagging → IMPROVING (early signal)", group = "Alerts")
+aWeak     = input.bool(true, "Alert: Leading → WEAKENING (exit warning)", group = "Alerts")
+aLag      = input.bool(true, "Alert: → LAGGING (avoid)", group = "Alerts")
+
+// ── Sectors (naam + symbol, chahe to badal sakte ho) ───────────────────
+G = "Sectors"
+n1  = input.string("IT", "", inline = "1", group = G),          s1  = input.symbol("NSE:CNXIT", "", inline = "1", group = G)
+n2  = input.string("Bank", "", inline = "2", group = G),        s2  = input.symbol("NSE:BANKNIFTY", "", inline = "2", group = G)
+n3  = input.string("Pvt Bank", "", inline = "3", group = G),    s3  = input.symbol("NSE:NIFTYPVTBANK", "", inline = "3", group = G)
+n4  = input.string("PSU Bank", "", inline = "4", group = G),    s4  = input.symbol("NSE:CNXPSUBANK", "", inline = "4", group = G)
+n5  = input.string("Fin Services", "", inline = "5", group = G), s5 = input.symbol("NSE:CNXFINANCE", "", inline = "5", group = G)
+n6  = input.string("Auto", "", inline = "6", group = G),        s6  = input.symbol("NSE:CNXAUTO", "", inline = "6", group = G)
+n7  = input.string("Pharma", "", inline = "7", group = G),      s7  = input.symbol("NSE:CNXPHARMA", "", inline = "7", group = G)
+n8  = input.string("Healthcare", "", inline = "8", group = G),  s8  = input.symbol("NSE:NIFTY_HEALTHCARE", "", inline = "8", group = G)
+n9  = input.string("FMCG", "", inline = "9", group = G),        s9  = input.symbol("NSE:CNXFMCG", "", inline = "9", group = G)
+n10 = input.string("Metal", "", inline = "10", group = G),      s10 = input.symbol("NSE:CNXMETAL", "", inline = "10", group = G)
+n11 = input.string("Realty", "", inline = "11", group = G),     s11 = input.symbol("NSE:CNXREALTY", "", inline = "11", group = G)
+n12 = input.string("Energy", "", inline = "12", group = G),     s12 = input.symbol("NSE:CNXENERGY", "", inline = "12", group = G)
+n13 = input.string("Oil & Gas", "", inline = "13", group = G),  s13 = input.symbol("NSE:NIFTY_OIL_AND_GAS", "", inline = "13", group = G)
+n14 = input.string("Infra", "", inline = "14", group = G),      s14 = input.symbol("NSE:CNXINFRA", "", inline = "14", group = G)
+n15 = input.string("PSE", "", inline = "15", group = G),        s15 = input.symbol("NSE:CNXPSE", "", inline = "15", group = G)
+n16 = input.string("Media", "", inline = "16", group = G),      s16 = input.symbol("NSE:CNXMEDIA", "", inline = "16", group = G)
+n17 = input.string("Consumption", "", inline = "17", group = G), s17 = input.symbol("NSE:CNXCONSUMPTION", "", inline = "17", group = G)
+n18 = input.string("Defence", "", inline = "18", group = G),    s18 = input.symbol("NSE:NIFTY_IND_DEFENCE", "", inline = "18", group = G)
+
+// ── Core calculation ─────────────────────────────────────────────────
+benchClose = request.security(benchSym, timeframe.period, close)
+
+// 1 = Leading, 2 = Weakening, 3 = Lagging, 4 = Improving, 0 = data nahi
+f_quad(float r, float m) =>
+    int q = 0
+    if not na(r) and not na(m)
+        q := r >= 100 ? (m >= 100 ? 1 : 2) : (m >= 100 ? 4 : 3)
+    q
+
+f_sector(simple string sym) =>
+    [c, trendUp] = request.security(sym, timeframe.period, [close, close > ta.sma(close, trendLen)], ignore_invalid_symbol = true)
+    rs    = 100 * c / benchClose
+    rsS   = ta.ema(rs, smoothLen)
+    ratio = 100 * rsS / ta.sma(rsS, rsLen)
+    mom   = 100 * ratio / ratio[momLen]
+    q     = f_quad(ratio, mom)
+    perf  = (c / c[perfLen] - benchClose / benchClose[perfLen]) * 100
+    [ratio, mom, q, q[1], trendUp, perf]
+
+[r1, m1, q1, p1, t1, f1]       = f_sector(s1)
+[r2, m2, q2, p2, t2, f2]       = f_sector(s2)
+[r3, m3, q3, p3, t3, f3]       = f_sector(s3)
+[r4, m4, q4, p4, t4, f4]       = f_sector(s4)
+[r5, m5, q5, p5, t5, f5]       = f_sector(s5)
+[r6, m6, q6, p6, t6, f6]       = f_sector(s6)
+[r7, m7, q7, p7, t7, f7]       = f_sector(s7)
+[r8, m8, q8, p8, t8, f8]       = f_sector(s8)
+[r9, m9, q9, p9, t9, f9]       = f_sector(s9)
+[r10, m10, q10, p10, t10, f10] = f_sector(s10)
+[r11, m11, q11, p11, t11, f11] = f_sector(s11)
+[r12, m12, q12, p12, t12, f12] = f_sector(s12)
+[r13, m13, q13, p13, t13, f13] = f_sector(s13)
+[r14, m14, q14, p14, t14, f14] = f_sector(s14)
+[r15, m15, q15, p15, t15, f15] = f_sector(s15)
+[r16, m16, q16, p16, t16, f16] = f_sector(s16)
+[r17, m17, q17, p17, t17, f17] = f_sector(s17)
+[r18, m18, q18, p18, t18, f18] = f_sector(s18)
+
+names  = array.from(n1, n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12, n13, n14, n15, n16, n17, n18)
+ratios = array.from(r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12, r13, r14, r15, r16, r17, r18)
+moms   = array.from(m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11, m12, m13, m14, m15, m16, m17, m18)
+quads  = array.from(q1, q2, q3, q4, q5, q6, q7, q8, q9, q10, q11, q12, q13, q14, q15, q16, q17, q18)
+prevs  = array.from(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15, p16, p17, p18)
+trends = array.from(t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15, t16, t17, t18)
+perfs  = array.from(f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, f15, f16, f17, f18)
+
+// ── Helpers ──────────────────────────────────────────────────────────
+f_phaseName(int q) =>
+    q == 1 ? "🟢 LEADING" : q == 2 ? "🟡 WEAKENING" : q == 3 ? "🔴 LAGGING" : q == 4 ? "🔵 IMPROVING" : "⚠ symbol check"
+
+f_phaseColor(int q) =>
+    q == 1 ? color.new(color.green, 20) : q == 2 ? color.new(color.orange, 20) : q == 3 ? color.new(color.red, 20) : q == 4 ? color.new(color.blue, 20) : color.new(color.gray, 50)
+
+// Sort order: Leading → Improving → Weakening → Lagging, andar strongest pehle
+f_prio(int q) =>
+    q == 1 ? 0 : q == 4 ? 1 : q == 2 ? 2 : q == 3 ? 3 : 9
+
+f_pos(string s) =>
+    switch s
+        "Top Right"     => position.top_right
+        "Middle Right"  => position.middle_right
+        "Bottom Right"  => position.bottom_right
+        "Top Left"      => position.top_left
+        "Middle Left"   => position.middle_left
+        "Bottom Left"   => position.bottom_left
+        "Top Center"    => position.top_center
+        => position.bottom_center
+
+txtSize = txtSizeS == "Tiny" ? size.tiny : txtSizeS == "Normal" ? size.normal : size.small
+
+N = array.size(names)
+keys = array.new_float(N, 0.0)
+int strongCount = 0
+for i = 0 to N - 1
+    q  = array.get(quads, i)
+    r  = array.get(ratios, i)
+    m  = array.get(moms, i)
+    sc = na(r) or na(m) ? 0.0 : (r - 100) + 2 * (m - 100)
+    array.set(keys, i, f_prio(q) * 1000 - sc)
+    if q == 1 or q == 4
+        strongCount += 1
+ord = array.sort_indices(keys, order.ascending)
+
+// Pane mein: kitne sectors Leading/Improving mein hain (market ki "rotation health")
+plot(strongCount, "Leading + Improving sectors", color = color.new(color.teal, 30), style = plot.style_columns)
+hline(9, "Half", color = color.gray, linestyle = hline.style_dotted)
+
+// ── Table ────────────────────────────────────────────────────────────
+var table tbl = table.new(f_pos(tablePosS), 7, 20, border_width = 1, border_color = color.new(color.gray, 70))
+if barstate.islast
+    hdrBg = color.new(color.navy, 10)
+    table.cell(tbl, 0, 0, "Trade Tribe – Sector Rotation (vs Nifty)", text_color = color.white, bgcolor = hdrBg, text_size = txtSize)
+    table.merge_cells(tbl, 0, 0, 6, 0)
+    hdrs = array.from("#", "Sector", "Phase", "RS", "Mom", "3M vs Nifty", "Trend")
+    for c = 0 to 6
+        table.cell(tbl, c, 1, array.get(hdrs, c), text_color = color.white, bgcolor = hdrBg, text_size = txtSize)
+    for k = 0 to N - 1
+        i  = array.get(ord, k)
+        q  = array.get(quads, i)
+        r  = array.get(ratios, i)
+        m  = array.get(moms, i)
+        pf = array.get(perfs, i)
+        tu = array.get(trends, i)
+        row = k + 2
+        table.cell(tbl, 0, row, str.tostring(k + 1), text_size = txtSize, text_color = chart.fg_color)
+        table.cell(tbl, 1, row, array.get(names, i), text_size = txtSize, text_color = chart.fg_color, text_halign = text.align_left)
+        table.cell(tbl, 2, row, f_phaseName(q), text_size = txtSize, text_color = color.white, bgcolor = f_phaseColor(q))
+        table.cell(tbl, 3, row, na(r) ? "-" : str.tostring(r, "#.0"), text_size = txtSize, text_color = chart.fg_color)
+        table.cell(tbl, 4, row, na(m) ? "-" : str.tostring(m, "#.0"), text_size = txtSize, text_color = chart.fg_color)
+        table.cell(tbl, 5, row, na(pf) ? "-" : (pf >= 0 ? "+" : "") + str.tostring(pf, "#.0") + "%", text_size = txtSize, text_color = na(pf) ? chart.fg_color : pf >= 0 ? color.green : color.red)
+        table.cell(tbl, 6, row, q == 0 ? "-" : tu ? "▲ Up" : "▼ Down", text_size = txtSize, text_color = tu ? color.green : color.red)
+
+// ── Alerts (sab changes ek hi message mein) ─────────────────────────────
+string msg = ""
+for i = 0 to N - 1
+    cur = array.get(quads, i)
+    prv = array.get(prevs, i)
+    if cur != prv and cur != 0 and prv != 0
+        nm  = array.get(names, i)
+        tr  = array.get(trends, i) ? "trend UP" : "trend DOWN"
+        txt = ""
+        if cur == 1 and aLead
+            txt := "🟢 " + nm + " → LEADING (" + tr + "). Is sector ke top RS stocks dekho."
+        else if cur == 4 and prv == 3 and aImp
+            txt := "🔵 " + nm + " → IMPROVING (" + tr + "). Watchlist mein daalo, early signal."
+        else if cur == 2 and prv == 1 and aWeak
+            txt := "🟡 " + nm + " → WEAKENING. Profit book / stop-loss tight karo."
+        else if cur == 3 and aLag
+            txt := "🔴 " + nm + " → LAGGING. Is sector se door raho."
+        if txt != ""
+            msg += txt + "\n"
+
+if msg != ""
+    alert("📊 Sector Rotation Update (" + timeframe.period + ")\n" + msg, alert.freq_once_per_bar_close)

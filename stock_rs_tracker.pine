@@ -1,0 +1,66 @@
+//@version=6
+// ════════════════════════════════════════════════════════════════════
+//  THE TRADE TRIBE — Stock RS Tracker
+//  Leading sector mil gaya? Ab usme sabse strong stock chuno.
+//  Kaise use karein:
+//   1) Stock ka chart kholo, timeframe = 1D (daily) ya 1W
+//   2) Indicator add karo — blue line = stock vs Nifty, orange = stock vs uska sector
+//   3) Alert: "Stock RS Tracker" → "Any alert() function call" → Once per bar close
+//  Signal ka matlab:
+//   ✅ ENTRY ZONE = RS > 0, RS badh raha hai, price trend MA ke upar
+//   ⚠️ EXIT       = RS 0 ke neeche gaya ya price trend MA tod gaya
+// ════════════════════════════════════════════════════════════════════
+indicator("Trade Tribe – Stock RS Tracker", shorttitle = "Stock RS", overlay = false)
+
+benchSym  = input.symbol("NSE:NIFTY", "Benchmark (Nifty)")
+sectorSym = input.symbol("NSE:CNXIT", "Is stock ka sector index (badal lena)")
+useSector = input.bool(true, "Sector se bhi compare karo")
+rsLen     = input.int(52, "Mansfield RS length (52 weekly / 250 daily)", minval = 5)
+autoLen   = input.bool(true, "Daily chart pe length auto 250 kar do")
+trendLen  = input.int(50, "Trend MA length", minval = 5)
+slopeLen  = input.int(5, "RS slope lookback", minval = 1)
+
+len = autoLen and timeframe.isdaily ? 250 : rsLen
+
+bench  = request.security(benchSym, timeframe.period, close)
+sector = request.security(sectorSym, timeframe.period, close, ignore_invalid_symbol = true)
+
+// Mansfield RS: 0 ke upar = stock Nifty se better chal raha hai
+rawRS  = close / bench
+mrs    = (rawRS / ta.sma(rawRS, len) - 1) * 100
+rawRSs = close / sector
+mrsSec = (rawRSs / ta.sma(rawRSs, len) - 1) * 100
+
+trendMA  = ta.sma(close, trendLen)
+rsRising = mrs > mrs[slopeLen]
+rsHigh   = rawRS >= ta.highest(rawRS, len)   // RS line naya high = sabse strong sign
+
+entryOk = mrs > 0 and rsRising and close > trendMA and (not useSector or na(mrsSec) or mrsSec > 0)
+exitSig = (mrs < 0 and mrs[1] >= 0) or (close < trendMA and close[1] >= trendMA[1])
+
+plot(mrs, "RS vs Nifty", color = color.new(color.blue, 0), linewidth = 2)
+plot(useSector ? mrsSec : na, "RS vs Sector", color = color.new(color.orange, 0), linewidth = 1)
+hline(0, "Zero", color = color.gray, linestyle = hline.style_dashed)
+bgcolor(entryOk ? color.new(color.green, 88) : na, title = "Entry zone")
+plotshape(rsHigh and not rsHigh[1], "RS new high", shape.circle, location.top, color.new(color.green, 0), size = size.tiny)
+plotshape(exitSig, "Exit warning", shape.xcross, location.top, color.new(color.red, 0), size = size.tiny)
+
+// Status box
+var table st = table.new(position.top_right, 2, 4, border_width = 1, border_color = color.new(color.gray, 70))
+if barstate.islast
+    table.cell(st, 0, 0, "RS vs Nifty", text_size = size.small, text_color = chart.fg_color)
+    table.cell(st, 1, 0, str.tostring(mrs, "#.0"), text_size = size.small, text_color = mrs >= 0 ? color.green : color.red)
+    table.cell(st, 0, 1, "RS vs Sector", text_size = size.small, text_color = chart.fg_color)
+    table.cell(st, 1, 1, na(mrsSec) ? "-" : str.tostring(mrsSec, "#.0"), text_size = size.small, text_color = na(mrsSec) ? chart.fg_color : mrsSec >= 0 ? color.green : color.red)
+    table.cell(st, 0, 2, "Trend", text_size = size.small, text_color = chart.fg_color)
+    table.cell(st, 1, 2, close > trendMA ? "▲ Up" : "▼ Down", text_size = size.small, text_color = close > trendMA ? color.green : color.red)
+    table.cell(st, 0, 3, "Status", text_size = size.small, text_color = chart.fg_color)
+    table.cell(st, 1, 3, entryOk ? "✅ ENTRY ZONE" : exitSig ? "⚠️ EXIT" : "⏳ Wait", text_size = size.small, text_color = color.white, bgcolor = entryOk ? color.new(color.green, 20) : exitSig ? color.new(color.red, 20) : color.new(color.gray, 40))
+
+// Alerts
+if entryOk and not entryOk[1]
+    alert("✅ " + syminfo.ticker + " ENTRY ZONE mein aaya — RS vs Nifty " + str.tostring(mrs, "#.0") + ", price trend ke upar. Pullback pe entry dekho.", alert.freq_once_per_bar_close)
+if rsHigh and not rsHigh[1]
+    alert("🚀 " + syminfo.ticker + " ki RS line naye high pe — Nifty se sabse zyada strong.", alert.freq_once_per_bar_close)
+if exitSig
+    alert("⚠️ " + syminfo.ticker + " EXIT warning — RS 0 ke neeche ya price trend MA ke neeche. Stop-loss check karo.", alert.freq_once_per_bar_close)
