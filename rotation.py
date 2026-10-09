@@ -329,6 +329,86 @@ def stock_rrg(daily, cons_map):
     return out
 
 
+# ── RRG photo (Telegram alert ke liye) ─────────────────────────────────────
+CORE_SHORT = ["Bank", "Private Bank", "PSU Bank", "Fin Services", "IT", "Auto", "Pharma", "Healthcare", "FMCG",
+              "Metal", "Realty", "Energy", "Oil & Gas", "Infrastructure", "PSE", "Media", "Consumption", "Defence"]
+
+
+def make_chart_png(rrg_all, path, tail=8):
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    from matplotlib.patches import Rectangle
+    T = rrg_all["weekly"]
+    end = len(T["dates"]) - 1
+    start = max(0, end - tail + 1)
+    col = {1: "#16a34a", 2: "#d97706", 3: "#dc2626", 4: "#2563eb", 0: "#888888"}
+    vis = [s for s in T["series"] if s["name"] in CORE_SHORT]
+    xs, ys = [100], [100]
+    for s in vis:
+        for i in range(start, end + 1):
+            if s["rs"][i] is not None and s["mom"][i] is not None:
+                xs.append(s["rs"][i]); ys.append(s["mom"][i])
+    x0, x1, y0, y1 = min(xs), max(xs), min(ys), max(ys)
+    px, py = max((x1 - x0) * .08, .4), max((y1 - y0) * .08, .4)
+    x0, x1, y0, y1 = x0 - px, x1 + px, y0 - py, y1 + py
+    fig, ax = plt.subplots(figsize=(10, 8), dpi=130)
+    fig.patch.set_facecolor("#0d1117"); ax.set_facecolor("#0d1117")
+    for (a, b, c, d, q) in [(x0, 100, 100, y1, 4), (100, x1, 100, y1, 1), (100, x1, y0, 100, 2), (x0, 100, y0, 100, 3)]:
+        ax.add_patch(Rectangle((a, c), b - a, d - c, color=col[q], alpha=.13, lw=0))
+    ax.axhline(100, color="#e6edf3", lw=.8, alpha=.6); ax.axvline(100, color="#e6edf3", lw=.8, alpha=.6)
+    kw = dict(fontsize=12, fontweight="bold", alpha=.9)
+    ax.text(x0 + (x1 - x0) * .01, y1 - (y1 - y0) * .03, "IMPROVING", color=col[4], va="top", **kw)
+    ax.text(x1 - (x1 - x0) * .01, y1 - (y1 - y0) * .03, "LEADING", color=col[1], va="top", ha="right", **kw)
+    ax.text(x1 - (x1 - x0) * .01, y0 + (y1 - y0) * .02, "WEAKENING", color=col[2], ha="right", **kw)
+    ax.text(x0 + (x1 - x0) * .01, y0 + (y1 - y0) * .02, "LAGGING", color=col[3], **kw)
+    for s in vis:
+        pts = [(s["rs"][i], s["mom"][i]) for i in range(start, end + 1) if s["rs"][i] is not None and s["mom"][i] is not None]
+        if not pts:
+            continue
+        q = quad(*pts[-1]); c = col[q]
+        px_, py_ = zip(*pts)
+        ax.plot(px_, py_, color=c, lw=1.6, alpha=.85)
+        ax.scatter(px_[:-1], py_[:-1], s=9, color=c, alpha=.6, zorder=3)
+        if len(pts) > 1:
+            ax.annotate("", xy=pts[-1], xytext=pts[-2], arrowprops=dict(arrowstyle="-|>", color=c, lw=1.6, mutation_scale=14))
+        else:
+            ax.scatter([pts[-1][0]], [pts[-1][1]], s=40, color=c, zorder=4)
+        ax.text(pts[-1][0], pts[-1][1] + (y1 - y0) * .012, " " + s["name"], color="#e6edf3", fontsize=9.5, zorder=5)
+    ax.set_xlim(x0, x1); ax.set_ylim(y0, y1)
+    ax.tick_params(colors="#8b949e", labelsize=9)
+    for sp in ax.spines.values():
+        sp.set_color("#30363d")
+    ax.grid(color="#30363d", lw=.5, alpha=.6)
+    ax.set_xlabel("RS-Ratio (Nifty 50 se taqat) →", color="#8b949e")
+    ax.set_ylabel("RS-Momentum →", color="#8b949e")
+    ax.set_title(f"Sector Rotation (RRG) — {T['dates'][start]} se {T['dates'][end]} · {tail} hafte · The Trade Tribe",
+                 color="#e6edf3", fontsize=12.5, loc="left")
+    fig.text(.99, .01, "Data: NSE official indices · Educational only", color="#8b949e", fontsize=8, ha="right")
+    fig.tight_layout()
+    fig.savefig(path, facecolor=fig.get_facecolor())
+    plt.close(fig)
+    return path
+
+
+def send_photo(path, caption=""):
+    import requests
+    tok = (os.environ.get("TELEGRAM_BOT_TOKEN") or "").strip().replace(" ", "")
+    chat = (os.environ.get("TELEGRAM_CHAT_ID") or "").strip().replace(" ", "")
+    if not tok or not chat:
+        return {"photo": "no secrets"}
+    try:
+        with open(path, "rb") as fh:
+            r = requests.post(f"https://api.telegram.org/bot{tok}/sendPhoto",
+                              data={"chat_id": chat, "caption": caption[:1000]}, files={"photo": fh}, timeout=60)
+        out = {"photo_status": r.status_code}
+        if r.status_code != 200:
+            out["photo_error"] = r.json().get("description")
+        return out
+    except Exception as e:
+        return {"photo_exception": str(e)[:200].replace(tok, "***")}
+
+
 # ── Alert text ───────────────────────────────────────────────────────
 def alert_text(res, url=""):
     lines = [f"📊 *Trade Tribe — Weekly Sector Rotation*", f"_Week ending {res['asof']}_", ""]
@@ -453,6 +533,13 @@ def main():
     except Exception as e:
         print("RRG universe fail:", e); rrg_all = None
     status["rrg_indices"] = len(rrg_all["weekly"]["series"]) if rrg_all else 0
+    png = None
+    if rrg_all:
+        try:
+            os.makedirs(OUT, exist_ok=True)
+            png = make_chart_png(rrg_all, os.path.join(OUT, "rrg.png"))
+        except Exception as e:
+            print("Chart photo fail:", e)
     os.makedirs(OUT, exist_ok=True)
     with open(os.path.join(OUT, "data.json"), "w") as f:
         json.dump(res, f, indent=1)
@@ -476,6 +563,8 @@ def main():
     print(msg)
     if not demo and os.environ.get("SEND_ALERT") == "1":
         status["telegram"] = send_telegram(msg)
+        if png and status["telegram"].get("send_status") == 200:
+            status["telegram"].update(send_photo(png, "📊 Main 18 sectors ka RRG (8 hafte). Full interactive chart: " + os.environ.get("DASHBOARD_URL", "")))
         with open(os.path.join(OUT, "status.json"), "w") as f:
             json.dump(status, f, indent=1)
 
