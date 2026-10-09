@@ -4,56 +4,214 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Sector Rotation – Trade Tribe</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.35.2/plotly.min.js"></script>
 <style>
-:root{--bg:#f6f7f9;--card:#fff;--fg:#14171f;--mut:#667085;--line:#e4e7ec;
---lead:#16a34a;--imp:#2563eb;--weak:#d97706;--lag:#dc2626}
-@media (prefers-color-scheme:dark){:root{--bg:#0d1117;--card:#161b22;--fg:#e6edf3;--mut:#8b949e;--line:#30363d}}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.45 -apple-system,Segoe UI,Roboto,sans-serif}
-.wrap{max-width:980px;margin:0 auto;padding:16px}
+:root{--bg:#f4f6f9;--card:#fff;--fg:#14171f;--mut:#667085;--line:#e4e7ec;--soft:#f0f2f5;
+--lead:#16a34a;--imp:#2563eb;--weak:#d97706;--lag:#dc2626;
+--qlead:rgba(22,163,74,.10);--qimp:rgba(37,99,235,.09);--qweak:rgba(217,119,6,.10);--qlag:rgba(220,38,38,.09)}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#0d1117;--card:#161b22;--fg:#e6edf3;--mut:#8b949e;--line:#30363d;--soft:#1f2630;
+--qlead:rgba(22,163,74,.16);--qimp:rgba(59,130,246,.16);--qweak:rgba(217,119,6,.16);--qlag:rgba(220,38,38,.15)}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:14.5px/1.45 -apple-system,Segoe UI,Roboto,sans-serif}
+.wrap{max-width:1280px;margin:0 auto;padding:16px}
 h1{font-size:20px;margin:4px 0}.sub{color:var(--mut);font-size:13px}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:14px 0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;margin:12px 0}
+.help{font-size:12.5px;color:var(--mut)}
+/* RRG layout */
+.rrgwrap{display:grid;grid-template-columns:300px 1fr;gap:12px}
+@media (max-width:860px){.rrgwrap{grid-template-columns:1fr}.side{order:2}}
+.side{border:1px solid var(--line);border-radius:10px;overflow:hidden;display:flex;flex-direction:column;max-height:640px}
+.side .tools{display:flex;gap:6px;flex-wrap:wrap;padding:8px;border-bottom:1px solid var(--line)}
+.chip{border:1px solid var(--line);background:var(--soft);color:var(--fg);border-radius:99px;padding:3px 10px;font-size:12px;cursor:pointer}
+.chip.on{background:var(--fg);color:var(--card);border-color:var(--fg)}
+.list{overflow:auto;flex:1}
+.it{display:grid;grid-template-columns:18px 10px 1fr auto auto;gap:6px;align-items:center;padding:5px 8px;font-size:12.5px;border-bottom:1px solid var(--line);cursor:pointer}
+.it:hover{background:var(--soft)}.it input{margin:0}
+.dot{width:9px;height:9px;border-radius:50%}
+.it .pr{color:var(--mut);font-variant-numeric:tabular-nums}.it .ch{font-variant-numeric:tabular-nums;min-width:48px;text-align:right}
+.grp{padding:5px 8px;font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--mut);background:var(--soft)}
+.ctrl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:6px;font-size:13px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{border:0;background:var(--card);color:var(--fg);padding:5px 10px;font-size:12.5px;cursor:pointer}
+.seg button.on{background:var(--fg);color:var(--card)}
+select,.btn{border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:8px;padding:5px 8px;font-size:12.5px}
+.btn{cursor:pointer}.btn.play{background:#2563eb;color:#fff;border-color:#2563eb;font-weight:600}
+.range{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--mut);margin:4px 0}
+.range input{flex:1}
+#bench{width:100%;height:56px;display:block}
+#chart{width:100%;display:block;touch-action:manipulation}
+.tip{position:fixed;pointer-events:none;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:6px 8px;font-size:12px;box-shadow:0 4px 14px rgba(0,0,0,.15);display:none;z-index:9}
+/* summary */
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:12px 0}
 .ph{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;border-top:4px solid}
 .ph b{display:block;font-size:13px;letter-spacing:.04em}.ph span{color:var(--mut);font-size:12px}
 .ph ul{margin:6px 0 0;padding-left:16px;font-size:14px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;margin:12px 0}
-#rrg{width:100%;height:420px}
-table{width:100%;border-collapse:collapse;font-size:13.5px}th,td{padding:7px 6px;border-bottom:1px solid var(--line);text-align:left}
-th{color:var(--mut);font-weight:600}.pill{display:inline-block;padding:2px 8px;border-radius:99px;color:#fff;font-size:12px;font-weight:600}
-.pos{color:var(--lead)}.neg{color:var(--lag)}.tops{color:var(--mut);font-size:12.5px}
-.row{padding:10px 0;border-bottom:1px solid var(--line)}.rh{display:flex;justify-content:space-between;align-items:center}.m{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:13px;color:var(--mut);margin-top:4px}.m b{color:var(--fg)}.tops{margin-top:4px}.help{font-size:13px;color:var(--mut)}
+.pill{display:inline-block;padding:2px 8px;border-radius:99px;color:#fff;font-size:12px;font-weight:600}
+.pos{color:var(--lead)}.neg{color:var(--lag)}
+.row{padding:10px 0;border-bottom:1px solid var(--line)}.rh{display:flex;justify-content:space-between;align-items:center}
+.m{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:13px;color:var(--mut);margin-top:4px}.m b{color:var(--fg)}
+.tops{margin-top:4px;color:var(--mut);font-size:12.5px}
 </style>
 </head>
 <body><div class="wrap">
 <h1>📊 Sector Rotation — The Trade Tribe</h1>
 <div class="sub" id="asof"></div>
-<div class="grid" id="phases"></div>
-<div class="card"><b>Rotation chart (RRG)</b><div class="help">Sectors ghadi ki ulti disha mein ghoomte hain: 🔵 Improving → 🟢 Leading → 🟡 Weakening → 🔴 Lagging. Line = pichhle 8 hafte ka safar, bada dot = abhi.</div><div id="rrg"></div></div>
-<div class="card"><b>Sab sectors</b><div id="tbl"></div>
-<div class="help">RS &gt; 100 = Nifty se strong · Mom &gt; 100 = taqat badh rahi hai · Breadth = sector ke kitne % stocks 50 DMA ke upar · Top stocks = RS ke hisaab se sabse strong (✓ = 50 DMA ke upar)</div></div>
+
+<div class="card">
+ <b>Relative Rotation Graph (RRG)</b> <span class="help">· Data: NSE official indices · Benchmark: Nifty 50</span>
+ <div class="rrgwrap" style="margin-top:8px">
+  <div class="side">
+   <div class="tools">
+    <span class="chip" data-g="Sectors">Sectors</span><span class="chip" data-g="Broad market">Broad market</span>
+    <span class="chip" data-g="core">Main 18</span><span class="chip" data-g="none">Clear</span>
+   </div>
+   <div class="list" id="list"></div>
+  </div>
+  <div>
+   <div class="ctrl">
+    <span class="seg" id="tf"><button data-tf="weekly" class="on">Weekly</button><button data-tf="daily">Daily</button></span>
+    <label>Tail <select id="tail"></select></label>
+    <button class="btn play" id="play">▶ Play</button>
+    <label><input type="checkbox" id="lbl" checked> Labels</label>
+   </div>
+   <svg id="bench"></svg>
+   <div class="range"><span id="from"></span><input type="range" id="end" min="0" max="0" value="0"><span id="to"></span></div>
+   <svg id="chart"></svg>
+   <div class="help">Sectors ghadi ki ulti disha mein ghoomte hain: 🔵 Improving → 🟢 Leading → 🟡 Weakening → 🔴 Lagging. Line = pichhla safar, teer (▶) = abhi. Slider se purani date dekho, ▶ Play se animation.</div>
+  </div>
+ </div>
 </div>
+
+<div class="grid" id="phases"></div>
+<div class="card"><b>Main 18 sectors (weekly)</b><div id="tbl"></div>
+<div class="help">RS &gt; 100 = Nifty se strong · Mom &gt; 100 = taqat badh rahi hai · Breadth = sector ke kitne % stocks 50 DMA ke upar · Top = RS ke hisaab se sabse strong (✓ = 50 DMA ke upar)</div></div>
+</div>
+<div class="tip" id="tip"></div>
 <script>
 const D=/*__DATA__*/null;
+const R=/*__RRG__*/null;
 const C={1:"#16a34a",2:"#d97706",3:"#dc2626",4:"#2563eb",0:"#888"};
 const N={1:"LEADING",2:"WEAKENING",3:"LAGGING",4:"IMPROVING",0:"NO DATA"};
 const E={1:"🟢",2:"🟡",3:"🔴",4:"🔵",0:"⚪"};
-document.getElementById("asof").textContent=`Week ending ${D.asof} · updated ${D.generated}`;
-const ph=document.getElementById("phases");
+const quad=(r,m)=>r==null||m==null?0:(r>=100?(m>=100?1:2):(m>=100?4:3));
+const $=id=>document.getElementById(id);
+$("asof").textContent=`Data till ${D.asof} · updated ${D.generated}`;
+
+/* ---------- summary cards + table (unchanged logic) ---------- */
 [1,4,2,3].forEach(p=>{const s=D.sectors.filter(x=>x.phase===p);
- ph.insertAdjacentHTML("beforeend",`<div class="ph" style="border-top-color:${C[p]}"><b>${E[p]} ${N[p]}</b><span>${s.length} sectors</span><ul>${s.map(x=>`<li>${x.name}${x.prev_phase!==x.phase&&x.prev_phase?" <small>(new)</small>":""}</li>`).join("")||"<li>—</li>"}</ul></div>`)});
-const dark=matchMedia("(prefers-color-scheme:dark)").matches,fg=dark?"#e6edf3":"#14171f",gr=dark?"#30363d":"#e4e7ec";
-const tr=[];D.sectors.forEach(s=>{const x=s.tail.map(t=>t[0]),y=s.tail.map(t=>t[1]);
- tr.push({x,y,mode:"lines",line:{color:C[s.phase],width:1.5},hoverinfo:"skip",showlegend:false});
- tr.push({x:[x.at(-1)],y:[y.at(-1)],mode:"markers+text",text:[s.name],textposition:"top center",textfont:{size:10,color:fg},marker:{size:10,color:C[s.phase]},showlegend:false,hovertemplate:`${s.name}<br>RS %{x:.1f}<br>Mom %{y:.1f}<extra></extra>`})});
-const xs=D.sectors.flatMap(s=>s.tail.map(t=>t[0])),ys=D.sectors.flatMap(s=>s.tail.map(t=>t[1]));
-const dx=Math.max(...xs.map(v=>Math.abs(v-100)))*1.15||2,dy=Math.max(...ys.map(v=>Math.abs(v-100)))*1.15||2;
-const q=(x0,x1,y0,y1,c,t,tx,ty)=>[{type:"rect",x0,x1,y0,y1,fillcolor:c,opacity:.07,line:{width:0},layer:"below"}];
-const shapes=[...q(100,100+dx,100,100+dy,C[1]),...q(100,100+dx,100-dy,100,C[2]),...q(100-dx,100,100-dy,100,C[3]),...q(100-dx,100,100,100+dy,C[4])];
-const ann=[[100+dx*.95,100+dy*.95,"LEADING",1,"right"],[100+dx*.95,100-dy*.95,"WEAKENING",2,"right"],[100-dx*.95,100-dy*.95,"LAGGING",3,"left"],[100-dx*.95,100+dy*.95,"IMPROVING",4,"left"]].map(a=>({x:a[0],y:a[1],text:a[2],showarrow:false,font:{color:C[a[3]],size:11},xanchor:a[4]}));
-Plotly.newPlot("rrg",tr,{margin:{l:40,r:10,t:10,b:36},paper_bgcolor:"rgba(0,0,0,0)",plot_bgcolor:"rgba(0,0,0,0)",font:{color:fg},
- xaxis:{title:"RS-Ratio",range:[100-dx,100+dx],gridcolor:gr,zeroline:false},yaxis:{title:"RS-Mom",range:[100-dy,100+dy],gridcolor:gr,zeroline:false},shapes,annotations:ann},{displayModeBar:false,responsive:true});
-document.getElementById("tbl").innerHTML=D.sectors.map(s=>`<div class="row"><div class="rh"><b>${s.name}</b><span class="pill" style="background:${C[s.phase]}">${N[s.phase]}</span></div>
+ $("phases").insertAdjacentHTML("beforeend",`<div class="ph" style="border-top-color:${C[p]}"><b>${E[p]} ${N[p]}</b><span>${s.length} sectors</span><ul>${s.map(x=>`<li>${x.name}${x.prev_phase!==x.phase&&x.prev_phase?" <small>(new)</small>":""}</li>`).join("")||"<li>—</li>"}</ul></div>`)});
+$("tbl").innerHTML=D.sectors.map(s=>`<div class="row"><div class="rh"><b>${s.name}</b><span class="pill" style="background:${C[s.phase]}">${N[s.phase]}</span></div>
 <div class="m"><span>RS <b>${s.ratio.toFixed(1)}</b></span><span>Mom <b>${s.mom.toFixed(1)}</b></span><span>3M <b class="${s.perf3m>=0?"pos":"neg"}">${s.perf3m>=0?"+":""}${s.perf3m.toFixed(1)}%</b></span><span>Trend <b class="${s.trend_up?"pos":"neg"}">${s.trend_up?"▲":"▼"}</b></span><span>Breadth <b>${s.breadth==null?"–":s.breadth+"%"}</b></span></div>
 ${s.top.length?`<div class="tops">Top: ${s.top.map(t=>`${t.symbol} ${t.rs>=0?"+":""}${t.rs}${t.above50?" ✓":""}`).join(" · ")}</div>`:""}</div>`).join("");
+
+/* ---------- RRG ---------- */
+const CORE=["Bank","Private Bank","PSU Bank","Fin Services","IT","Auto","Pharma","Healthcare","FMCG","Metal","Realty","Energy","Oil & Gas","Infrastructure","PSE","Media","Consumption","Defence"];
+let tf="weekly", sel=new Set(CORE), playing=null;
+const TAILS={weekly:[4,8,12,26],daily:[5,10,20,40]};
+const st={weekly:{tail:8,end:null},daily:{tail:10,end:null}};
+const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const NS="http://www.w3.org/2000/svg";
+const el=(t,a,p)=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);if(p)p.appendChild(e);return e};
+
+function fillTail(){const s=$("tail");s.innerHTML=TAILS[tf].map(n=>`<option ${n===st[tf].tail?"selected":""} value="${n}">${n} ${tf==="weekly"?"wk":"din"}</option>`).join("")}
+function headQuad(s,i){return quad(s.rs[i],s.mom[i])}
+
+function buildList(){
+ const T=R[tf],end=st[tf].end;let h="";
+ ["Sectors","Broad market"].forEach(g=>{
+  h+=`<div class="grp">${g.toUpperCase()}</div>`;
+  T.series.filter(s=>s.group===g).forEach(s=>{
+   const q=headQuad(s,end),ch=s.chg;
+   h+=`<label class="it"><input type="checkbox" data-n="${s.name}" ${sel.has(s.name)?"checked":""}><span class="dot" style="background:${C[q]}"></span><span>${s.name}</span><span class="pr">${s.price!=null?s.price.toLocaleString("en-IN",{maximumFractionDigits:0}):"–"}</span><span class="ch ${ch>=0?"pos":"neg"}">${ch==null?"":(ch>=0?"+":"")+ch.toFixed(2)+"%"}</span></label>`});
+ });
+ $("list").innerHTML=h;
+ $("list").querySelectorAll("input").forEach(i=>i.onchange=()=>{i.checked?sel.add(i.dataset.n):sel.delete(i.dataset.n);draw()});
+}
+
+function drawBench(){
+ const T=R[tf],svg=$("bench"),W=svg.clientWidth||600,H=56;svg.setAttribute("viewBox",`0 0 ${W} ${H}`);svg.innerHTML="";
+ const v=T.bench,n=v.length,vals=v.filter(x=>x!=null),mn=Math.min(...vals),mx=Math.max(...vals);
+ const X=i=>4+i*(W-8)/(n-1),Y=x=>H-4-(x-mn)/(mx-mn||1)*(H-12);
+ const end=st[tf].end,start=Math.max(0,end-st[tf].tail+1);
+ el("rect",{x:X(start),y:0,width:Math.max(2,X(end)-X(start)),height:H,fill:css("--soft")},svg);
+ let d="";v.forEach((x,i)=>{if(x!=null)d+=(d?"L":"M")+X(i).toFixed(1)+","+Y(x).toFixed(1)});
+ el("path",{d,fill:"none",stroke:"#3b82f6","stroke-width":1.6},svg);
+ const t=el("text",{x:6,y:12,"font-size":11,fill:css("--mut")},svg);t.textContent="Nifty 50";
+}
+
+function draw(){
+ const T=R[tf],end=st[tf].end,tail=st[tf].tail,start=Math.max(0,end-tail+1);
+ $("from").textContent=T.dates[start];$("to").textContent=T.dates[end];
+ drawBench();
+ const svg=$("chart"),W=svg.clientWidth||700,H=Math.max(380,Math.min(640,W*0.72));
+ svg.setAttribute("viewBox",`0 0 ${W} ${H}`);svg.style.height=H+"px";svg.innerHTML="";
+ const vis=T.series.filter(s=>sel.has(s.name));
+ let xs=[100],ys=[100];
+ vis.forEach(s=>{for(let i=start;i<=end;i++){if(s.rs[i]!=null&&s.mom[i]!=null){xs.push(s.rs[i]);ys.push(s.mom[i])}}});
+ let x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys);
+ const px=Math.max((x1-x0)*0.08,0.4),py=Math.max((y1-y0)*0.08,0.4);x0-=px;x1+=px;y0-=py;y1+=py;
+ const L=44,Rt=12,Tp=10,B=34,X=v=>L+(v-x0)/(x1-x0)*(W-L-Rt),Y=v=>Tp+(y1-v)/(y1-y0)*(H-Tp-B);
+ const cx=X(100),cy=Y(100);
+ // quadrants
+ [[L,Tp,cx-L,cy-Tp,"--qimp"],[cx,Tp,W-Rt-cx,cy-Tp,"--qlead"],[cx,cy,W-Rt-cx,H-B-cy,"--qweak"],[L,cy,cx-L,H-B-cy,"--qlag"]]
+  .forEach(r=>el("rect",{x:r[0],y:r[1],width:Math.max(0,r[2]),height:Math.max(0,r[3]),fill:css(r[4])},svg));
+ // grid + axes
+ const step=v=>{const r=v/6,p=Math.pow(10,Math.floor(Math.log10(r))),m=r/p;return(m<1.5?1:m<3.5?2:5)*p};
+ const sx=step(x1-x0),sy=step(y1-y0),gc=css("--line"),mc=css("--mut");
+ for(let v=Math.ceil(x0/sx)*sx;v<=x1;v+=sx){el("line",{x1:X(v),x2:X(v),y1:Tp,y2:H-B,stroke:gc,"stroke-width":.6},svg);const t=el("text",{x:X(v),y:H-B+14,"font-size":10.5,fill:mc,"text-anchor":"middle"},svg);t.textContent=v.toFixed(sx<1?1:0)}
+ for(let v=Math.ceil(y0/sy)*sy;v<=y1;v+=sy){el("line",{x1:L,x2:W-Rt,y1:Y(v),y2:Y(v),stroke:gc,"stroke-width":.6},svg);const t=el("text",{x:L-5,y:Y(v)+3.5,"font-size":10.5,fill:mc,"text-anchor":"end"},svg);t.textContent=v.toFixed(sy<1?1:0)}
+ el("line",{x1:cx,x2:cx,y1:Tp,y2:H-B,stroke:css("--fg"),"stroke-width":1,opacity:.55},svg);
+ el("line",{x1:L,x2:W-Rt,y1:cy,y2:cy,stroke:css("--fg"),"stroke-width":1,opacity:.55},svg);
+ [["IMPROVING",L+6,Tp+14,"start",4],["LEADING",W-Rt-6,Tp+14,"end",1],["WEAKENING",W-Rt-6,H-B-6,"end",2],["LAGGING",L+6,H-B-6,"start",3]]
+  .forEach(a=>{const t=el("text",{x:a[1],y:a[2],"font-size":11.5,"font-weight":700,fill:C[a[4]],"text-anchor":a[3],opacity:.85},svg);t.textContent=a[0]});
+ let t=el("text",{x:(L+W-Rt)/2,y:H-4,"font-size":11,fill:mc,"text-anchor":"middle"},svg);t.textContent="RS-Ratio (Nifty se taqat) →";
+ t=el("text",{x:12,y:(Tp+H-B)/2,"font-size":11,fill:mc,"text-anchor":"middle",transform:`rotate(-90 12 ${(Tp+H-B)/2})`},svg);t.textContent="RS-Momentum →";
+ // tails
+ const labels=[];
+ vis.forEach(s=>{
+  const pts=[];for(let i=start;i<=end;i++){if(s.rs[i]!=null&&s.mom[i]!=null)pts.push([X(s.rs[i]),Y(s.mom[i]),i])}
+  if(!pts.length)return;
+  const q=headQuad(s,end)||quad(s.rs[pts.at(-1)[2]],s.mom[pts.at(-1)[2]]),col=C[q];
+  const g=el("g",{},svg);
+  if(pts.length>1){
+   // smooth path (Catmull-Rom -> bezier)
+   let d=`M${pts[0][0]},${pts[0][1]}`;
+   for(let i=0;i<pts.length-1;i++){const p0=pts[i-1]||pts[i],p1=pts[i],p2=pts[i+1],p3=pts[i+2]||p2;
+    d+=`C${p1[0]+(p2[0]-p0[0])/6},${p1[1]+(p2[1]-p0[1])/6} ${p2[0]-(p3[0]-p1[0])/6},${p2[1]-(p3[1]-p1[1])/6} ${p2[0]},${p2[1]}`}
+   el("path",{d,fill:"none",stroke:col,"stroke-width":1.8,opacity:.9},g);
+  }
+  pts.slice(0,-1).forEach((p,k)=>el("circle",{cx:p[0],cy:p[1],r:2.2,fill:col,opacity:.35+.6*k/pts.length},g));
+  const h=pts.at(-1),pv=pts.length>1?pts.at(-2):[h[0]-1,h[1]];
+  const ang=Math.atan2(h[1]-pv[1],h[0]-pv[0]),a=9;
+  el("path",{d:`M${h[0]+Math.cos(ang)*3},${h[1]+Math.sin(ang)*3}L${h[0]-a*Math.cos(ang-0.45)},${h[1]-a*Math.sin(ang-0.45)}L${h[0]-a*Math.cos(ang+0.45)},${h[1]-a*Math.sin(ang+0.45)}Z`,fill:col},g);
+  const hit=el("circle",{cx:h[0],cy:h[1],r:11,fill:"transparent",style:"cursor:pointer"},g);
+  const i=h[2];
+  const show=e=>{const tp=$("tip");tp.innerHTML=`<b>${s.full}</b><br>${T.dates[i]}<br>RS ${s.rs[i].toFixed(2)} · Mom ${s.mom[i].toFixed(2)}<br><span style="color:${col};font-weight:700">${N[q]}</span>`;tp.style.display="block";
+   const ev=e.touches?e.touches[0]:e;tp.style.left=Math.min(ev.clientX+12,innerWidth-190)+"px";tp.style.top=(ev.clientY+12)+"px"};
+  hit.addEventListener("mousemove",show);hit.addEventListener("mouseleave",()=>$("tip").style.display="none");hit.addEventListener("touchstart",show,{passive:true});
+  labels.push({x:h[0],y:h[1],txt:s.name,col});
+ });
+ if($("lbl").checked){
+  // simple overlap avoidance
+  const placed=[];labels.sort((a,b)=>a.y-b.y).forEach(l=>{let y=l.y-8;for(const p of placed){if(Math.abs(p.x-l.x)<70&&Math.abs(p.y-y)<11)y=p.y-11}
+   placed.push({x:l.x,y});const t=el("text",{x:l.x+6,y:y,"font-size":10.5,fill:css("--fg"),"paint-order":"stroke",stroke:css("--card"),"stroke-width":3},svg);t.textContent=l.txt});
+ }
+}
+
+function setTF(n){tf=n;document.querySelectorAll("#tf button").forEach(b=>b.classList.toggle("on",b.dataset.tf===n));
+ const T=R[tf];if(st[tf].end==null)st[tf].end=T.dates.length-1;
+ $("end").max=T.dates.length-1;$("end").min=1;$("end").value=st[tf].end;fillTail();buildList();draw()}
+document.querySelectorAll("#tf button").forEach(b=>b.onclick=()=>{stop();setTF(b.dataset.tf)});
+$("tail").onchange=e=>{st[tf].tail=+e.target.value;draw()};
+$("end").oninput=e=>{stop();st[tf].end=+e.target.value;buildList();draw()};
+$("lbl").onchange=draw;
+document.querySelectorAll(".chip").forEach(c=>c.onclick=()=>{const g=c.dataset.g,T=R[tf];
+ if(g==="none")sel.clear();else if(g==="core")sel=new Set(CORE);else{const names=T.series.filter(s=>s.group===g).map(s=>s.name);const all=names.every(n=>sel.has(n));names.forEach(n=>all?sel.delete(n):sel.add(n))}
+ buildList();draw()});
+function stop(){if(playing){clearInterval(playing);playing=null;$("play").textContent="▶ Play"}}
+$("play").onclick=()=>{if(playing)return stop();const T=R[tf],last=T.dates.length-1;
+ if(st[tf].end>=last)st[tf].end=Math.min(last,st[tf].tail);
+ $("play").textContent="⏸ Pause";
+ playing=setInterval(()=>{if(st[tf].end>=last){stop();return}st[tf].end++;$("end").value=st[tf].end;buildList();draw()},tf==="weekly"?550:220)};
+addEventListener("resize",()=>draw());
+if(R&&R.weekly)setTF("weekly");else document.querySelector(".rrgwrap").innerHTML='<div class="help">RRG data abhi available nahi hai.</div>';
 </script>
 </body></html>

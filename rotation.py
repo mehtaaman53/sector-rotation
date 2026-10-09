@@ -204,6 +204,81 @@ def analyse(daily, cons_map):
             "sectors": sectors}
 
 
+# ── RRG universe (Strike-style chart: sab indices, daily + weekly) ──────────
+UNIVERSE = {
+    "Sectors": ["Nifty Bank", "Nifty Private Bank", "Nifty PSU Bank", "Nifty Financial Services",
+                "Nifty Capital Markets", "Nifty Insurance", "Nifty IT", "Nifty Auto", "Nifty Pharma",
+                "Nifty Healthcare Index", "Nifty Hospitals", "Nifty FMCG", "Nifty Consumer Durables",
+                "Nifty Metal", "Nifty Realty", "Nifty Energy", "Nifty Oil & Gas", "Nifty Infrastructure",
+                "Nifty Capital Goods", "Nifty Cement", "Nifty Chemicals", "Nifty PSE", "Nifty CPSE",
+                "Nifty Media", "Nifty India Consumption", "Nifty India Defence", "Nifty India Railways PSU",
+                "Nifty India Manufacturing", "Nifty MNC", "Nifty Commodities", "Nifty Housing",
+                "Nifty India Tourism", "Nifty EV & New Age Automotive", "Nifty India Digital"],
+    "Broad market": ["Nifty Next 50", "Nifty 100", "Nifty 200", "Nifty 500", "NIFTY LargeMidcap 250",
+                     "Nifty Midcap 50", "NIFTY Midcap 100", "Nifty Midcap 150", "Nifty Midcap Select",
+                     "Nifty MidSmallcap 400", "Nifty Smallcap 50", "NIFTY Smallcap 100",
+                     "Nifty Smallcap 250", "Nifty Microcap 250"],
+}
+# timeframe: (smooth, rs_len, mom_len, kitne points rakhne hain)
+TF_PARAMS = {"weekly": (SMOOTH, RS_LEN, MOM_LEN, 52), "daily": (5, 21, 5, 130)}
+
+
+def short_name(n):
+    s = n
+    for pre in ("NIFTY ", "Nifty "):
+        if s.startswith(pre):
+            s = s[len(pre):]
+    s = s.replace("India ", "").replace(" Index", "").replace("Financial Services", "Fin Services")
+    return s.replace("EV & New Age Automotive", "EV & New Age Auto")
+
+
+def rrg_universe(nse):
+    """nse = wide DataFrame (date x NSE index name). Har timeframe ke liye RS-Ratio/Mom series."""
+    import nse_data
+    bcol = nse_data.pick(nse, "Nifty 50")
+    if bcol is None:
+        return None
+    nse = nse[nse[bcol].notna()]
+    out = {}
+    for tf, (sm, rl, ml, keep) in TF_PARAMS.items():
+        if tf == "weekly":
+            df = nse.resample("W-FRI").last()
+            real = pd.Series(nse.index, index=nse.index).resample("W-FRI").last()  # hafte ka asli last din
+        else:
+            df = nse
+            real = pd.Series(nse.index, index=nse.index)
+        df = df[df[bcol].notna()]
+        b = df[bcol]
+        idx = df.index[-keep:]
+        labels = real.reindex(idx)
+        series = []
+        for grp, names in UNIVERSE.items():
+            for n in names:
+                col = nse_data.pick(df, n)
+                if col is None:
+                    continue
+                c = df[col]
+                rs = 100 * c / b
+                rs_s = rs.ewm(span=sm, adjust=False, ignore_na=True).mean()
+                ratio = 100 * rs_s / rs_s.rolling(rl).mean()
+                mom = 100 * ratio / ratio.shift(ml)
+                ratio, mom = ratio.reindex(idx), mom.reindex(idx)
+                if ratio.notna().sum() < 2:
+                    continue
+                cl = c.reindex(idx)
+                last = cl.dropna()
+                chg = float((last.iloc[-1] / last.iloc[-2] - 1) * 100) if len(last) > 1 else None
+                f = lambda v: None if pd.isna(v) else round(float(v), 2)
+                series.append({"name": short_name(n), "full": n, "group": grp,
+                               "rs": [f(v) for v in ratio], "mom": [f(v) for v in mom],
+                               "price": f(last.iloc[-1]) if len(last) else None,
+                               "chg": None if chg is None else round(chg, 2)})
+        out[tf] = {"dates": [d.strftime("%d %b %y") for d in labels],
+                   "bench": [None if pd.isna(v) else round(float(v), 2) for v in b.reindex(idx)],
+                   "series": series}
+    return out
+
+
 # ── Alert text ───────────────────────────────────────────────────────
 def alert_text(res, url=""):
     lines = [f"📊 *Trade Tribe — Weekly Sector Rotation*", f"_Week ending {res['asof']}_", ""]
@@ -273,8 +348,13 @@ def send_telegram(text):
 def main():
     demo = "--demo" in sys.argv
     status = {"indices": {}, "constituents": {}}
+    nse = pd.DataFrame()
     if demo:
         daily, cons_map = demo_data()
+        # demo NSE frame: sector series ko NSE naam do
+        nse = pd.DataFrame({"Nifty 50": daily[BENCH]})
+        for (name, _, _), ns in zip(SECTORS, UNIVERSE["Sectors"]):
+            nse[ns] = daily["SEC::" + name]
     else:
         import yfinance as yf
         cons_map = {name: fetch_constituents(f) for name, _, f in SECTORS}
@@ -318,6 +398,11 @@ def main():
         daily = idx_df.join(stocks, how="left")
         daily = daily[daily[BENCH].notna()]
     res = analyse(daily, cons_map)
+    try:
+        rrg_all = rrg_universe(nse) if len(nse) else None
+    except Exception as e:
+        print("RRG universe fail:", e); rrg_all = None
+    status["rrg_indices"] = len(rrg_all["weekly"]["series"]) if rrg_all else 0
     os.makedirs(OUT, exist_ok=True)
     with open(os.path.join(OUT, "data.json"), "w") as f:
         json.dump(res, f, indent=1)
@@ -326,10 +411,13 @@ def main():
         json.dump(status, f, indent=1)
     tpl = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "dashboard_template.html"), encoding="utf-8").read()
     with open(os.path.join(OUT, "index.html"), "w", encoding="utf-8") as f:
-        f.write(tpl.replace("/*__DATA__*/null", json.dumps(res)))
+        f.write(tpl.replace("/*__DATA__*/null", json.dumps(res)).replace("/*__RRG__*/null", json.dumps(rrg_all, separators=(",", ":"))))
+    if rrg_all:
+        with open(os.path.join(OUT, "rrg.json"), "w") as f:
+            json.dump(rrg_all, f, separators=(",", ":"))
     msg = alert_text(res, os.environ.get("DASHBOARD_URL", ""))
     print(msg)
-    if not demo and "--no-alert" not in sys.argv:
+    if not demo and os.environ.get("SEND_ALERT") == "1":
         status["telegram"] = send_telegram(msg)
         with open(os.path.join(OUT, "status.json"), "w") as f:
             json.dump(status, f, indent=1)

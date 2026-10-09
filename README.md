@@ -1,7 +1,12 @@
 # 📊 Trade Tribe — Sector Rotation (Auto)
 
-Har **Shanivar subah ~8:45** ye apne aap chalta hai:
-1. 18 NSE sectors ko Nifty se compare karta hai (RRG — Leading / Improving / Weakening / Lagging)
+**Roz shaam ~7:45 (Mon–Fri)** dashboard update hota hai, aur **Shanivar subah ~8:45** Telegram alert aata hai.
+
+Data: **NSE official indices** (nsearchives.nseindia.com), stocks ke liye Yahoo Finance.
+
+Kya hota hai:
+1. ~48 NSE indices (sectors + broad market) ko Nifty 50 se compare karta hai — Strike jaisa RRG chart, Daily/Weekly, ▶ Play
+1. 18 main sectors ka phase (RRG — Leading / Improving / Weakening / Lagging)
 2. Har sector ka breadth (% stocks 50 DMA ke upar) + top 5 strong stocks nikalta hai
 3. Live dashboard update karta hai → `https://<aapka-github-naam>.github.io/sector-rotation/`
 4. **Telegram pe alert** bhejta hai — kaun sa sector Leading mein aaya, kaun sa kamzor hua
