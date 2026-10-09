@@ -226,54 +226,6 @@ def alert_text(res, url=""):
     return "\n".join(lines)
 
 
-def channel_text(res, url=""):
-    """WhatsApp channel ke liye neutral, educational post (WhatsApp *bold* format)."""
-    L = ["📊 *Sector Rotation Update — The Trade Tribe*", f"_Week ending {res['asof']}_", ""]
-    ch = []
-    for s in res["sectors"]:
-        c, p = s["phase"], s["prev_phase"]
-        if c != p and 0 not in (c, p):
-            ch.append(f"{EMOJI[c]} {s['name']}: {PHASE[p].title()} → *{PHASE[c].title()}*")
-    if ch:
-        L += ["*Is hafte ke badlav:*"] + ch + [""]
-    for ph, title in ((1, "Nifty se strong sectors"), (4, "Taqat badh rahi hai")):
-        g = [s for s in res["sectors"] if s["phase"] == ph]
-        if not g:
-            continue
-        L.append(f"{EMOJI[ph]} *{title} ({PHASE[ph].title()}):*")
-        for s in g:
-            names = ", ".join(t["symbol"] for t in s["top"][:3] if t["above50"])
-            L.append(f"• *{s['name']}* — 3M mein Nifty se {s['perf3m']:+.1f}%")
-            if names:
-                L.append(f"   RS ke hisaab se strong stocks: {names}")
-        L.append("")
-    weak = [s["name"] for s in res["sectors"] if s["phase"] in (2, 3)]
-    if weak:
-        L += ["🔴 *Nifty se kamzor:* " + ", ".join(weak), ""]
-    strong = sum(1 for s in res["sectors"] if s["phase"] in (1, 4))
-    L.append(f"📈 Market breadth: {strong}/{len(res['sectors'])} sectors Leading/Improving mein")
-    if url:
-        L.append(f"🔗 Full chart: {url}")
-    L += ["", "_⚠️ Ye sirf data aur educational purpose ke liye hai, buy/sell recommendation nahi. Invest karne se pehle apna research karein ya advisor se baat karein._"]
-    return "\n".join(L)
-
-
-def send_plain(text, markdown=False):
-    import requests
-    tok = (os.environ.get("TELEGRAM_BOT_TOKEN") or "").strip().replace(" ", "")
-    chat = (os.environ.get("TELEGRAM_CHAT_ID") or "").strip().replace(" ", "")
-    if not tok or not chat:
-        return
-    data = {"chat_id": chat, "text": text, "disable_web_page_preview": "true"}
-    if markdown:
-        data["parse_mode"] = "Markdown"
-    try:
-        r = requests.post(f"https://api.telegram.org/bot{tok}/sendMessage", data=data, timeout=30)
-        print("channel msg:", r.status_code)
-    except Exception as e:
-        print("channel msg fail", str(e)[:100].replace(tok, "***"))
-
-
 def send_telegram(text):
     """Telegram pe bhejo; result (bina token ke) status mein wapas do."""
     import requests
@@ -346,12 +298,8 @@ def main():
         f.write(tpl.replace("/*__DATA__*/null", json.dumps(res)))
     msg = alert_text(res, os.environ.get("DASHBOARD_URL", ""))
     print(msg)
-    print("\n----- CHANNEL -----\n" + channel_text(res, os.environ.get("DASHBOARD_URL", "")))
     if not demo and "--no-alert" not in sys.argv:
         status["telegram"] = send_telegram(msg)
-        if status["telegram"].get("send_status") == 200:
-            send_plain("👇 *WhatsApp channel ke liye* — agla message long-press → Copy → channel pe paste karo.", markdown=True)
-            send_plain(channel_text(res, os.environ.get("DASHBOARD_URL", "")))
         with open(os.path.join(OUT, "status.json"), "w") as f:
             json.dump(status, f, indent=1)
 
