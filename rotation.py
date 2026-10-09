@@ -34,6 +34,18 @@ SECTORS = [  # naam, Yahoo tickers ("|" = pehla na mile to agla try), constituen
     ("Consumption",  "^CNXCONSUM|NIFTY_CONSUMPTION.NS",        "ind_niftyconsumptionlist.csv"),
     ("Defence",      "NIFTY_IND_DEFENCE.NS|^CNXDEFENCE",       "ind_niftyindiadefence_list.csv"),
 ]
+# NSE archive mein index ke naam (pehla jo mile)
+NSE_NAMES = {
+    "IT": ["Nifty IT"], "Bank": ["Nifty Bank"], "Pvt Bank": ["Nifty Private Bank"],
+    "PSU Bank": ["Nifty PSU Bank"], "Fin Services": ["Nifty Financial Services"],
+    "Auto": ["Nifty Auto"], "Pharma": ["Nifty Pharma"],
+    "Healthcare": ["Nifty Healthcare Index", "Nifty Healthcare"], "FMCG": ["Nifty FMCG"],
+    "Metal": ["Nifty Metal"], "Realty": ["Nifty Realty"], "Energy": ["Nifty Energy"],
+    "Oil & Gas": ["Nifty Oil & Gas", "Nifty Oil and Gas"], "Infra": ["Nifty Infrastructure", "Nifty Infra"],
+    "PSE": ["Nifty PSE"], "Media": ["Nifty Media"],
+    "Consumption": ["Nifty India Consumption", "Nifty Consumption"],
+    "Defence": ["Nifty India Defence", "Nifty Defence"],
+}
 RS_LEN, MOM_LEN, SMOOTH, TREND_LEN, PERF_LEN, TAIL = 10, 4, 3, 40, 13, 8
 PHASE = {1: "LEADING", 2: "WEAKENING", 3: "LAGGING", 4: "IMPROVING", 0: "NO DATA"}
 EMOJI = {1: "🟢", 2: "🟡", 3: "🔴", 4: "🔵", 0: "⚪"}
@@ -271,10 +283,29 @@ def main():
         print(f"Downloading {len(all_stocks)} stocks…")
         stocks = fetch_prices(all_stocks)
         stocks.index = pd.to_datetime(stocks.index).tz_localize(None).normalize()
-        _, bench = fetch_index(BENCH)
+        # 1st choice: NSE official index data; backup: Yahoo; last: equal-weight stocks
+        try:
+            import nse_data
+            nse = nse_data.update_history()
+        except Exception as e:
+            print("NSE data fail:", e)
+            nse = pd.DataFrame()
+        status["nse_days"] = int(len(nse))
+        status["nse_last"] = str(nse.index.max().date()) if len(nse) else None
+        bcol = nse_data.pick(nse, "Nifty 50") if len(nse) else None
+        if bcol and nse[bcol].notna().sum() >= 260:
+            bench = nse[bcol].dropna(); status["benchmark"] = "NSE: " + bcol
+        else:
+            _, bench = fetch_index(BENCH); status["benchmark"] = "Yahoo ^NSEI"
         cols = {BENCH: bench}
         for name, cands, _ in SECTORS:
-            used, c = fetch_index(cands)
+            used, c = None, None
+            col = nse_data.pick(nse, *NSE_NAMES.get(name, [])) if len(nse) else None
+            if col and nse[col].notna().sum() >= 260:
+                c, used = nse[col].dropna(), "NSE: " + col
+            if c is None:
+                used, c = fetch_index(cands)
+                used = f"Yahoo {used}" if used else None
             if c is None:
                 syms = [x for x in cons_map.get(name, []) if x in stocks]
                 c = synthetic_index(stocks[syms]) if syms else None
