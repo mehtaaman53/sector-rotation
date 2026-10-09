@@ -279,6 +279,56 @@ def rrg_universe(nse):
     return out
 
 
+# ── Stock RRG: har sector ke stocks vs us sector ka index ──────────────────
+STOCK_KEEP = {"weekly": 52, "daily": 60}
+
+
+def stock_rrg(daily, cons_map):
+    out = {}
+    for name, _, _ in SECTORS:
+        tk = "SEC::" + name
+        syms = [x for x in cons_map.get(name, []) if x in daily]
+        if tk not in daily or len(syms) < 3:
+            continue
+        key = short_name(NSE_NAMES.get(name, [name])[0])
+        sec_out = {"index": NSE_NAMES.get(name, [name])[0]}
+        base = daily[[tk] + syms]
+        base = base[base[tk].notna()]
+        for tf, (sm, rl, ml, _) in TF_PARAMS.items():
+            keep = STOCK_KEEP[tf]
+            if tf == "weekly":
+                df = base.resample("W-FRI").last()
+                real = pd.Series(base.index, index=base.index).resample("W-FRI").last()
+            else:
+                df, real = base, pd.Series(base.index, index=base.index)
+            df = df[df[tk].notna()]
+            b = df[tk]
+            idx = df.index[-keep:]
+            f = lambda v: None if pd.isna(v) else round(float(v), 2)
+            series = []
+            for sym in syms:
+                c = df[sym].ffill(limit=3)
+                if c.notna().sum() < rl + ml + 5:
+                    continue
+                rs = 100 * c / b
+                rs_s = rs.ewm(span=sm, adjust=False, ignore_na=True).mean()
+                ratio = 100 * rs_s / rs_s.rolling(rl).mean()
+                mom = 100 * ratio / ratio.shift(ml)
+                ratio, mom = ratio.reindex(idx), mom.reindex(idx)
+                if ratio.notna().sum() < 2:
+                    continue
+                last = c.reindex(idx).dropna()
+                chg = float((last.iloc[-1] / last.iloc[-2] - 1) * 100) if len(last) > 1 else None
+                series.append({"name": sym.replace(".NS", ""), "full": sym.replace(".NS", ""), "group": key,
+                               "rs": [f(v) for v in ratio], "mom": [f(v) for v in mom],
+                               "price": f(last.iloc[-1]) if len(last) else None,
+                               "chg": None if chg is None else round(chg, 2)})
+            sec_out[tf] = {"dates": [d.strftime("%d %b %y") for d in real.reindex(idx)],
+                           "bench": [f(v) for v in b.reindex(idx)], "series": series}
+        out[key] = sec_out
+    return out
+
+
 # ── Alert text ───────────────────────────────────────────────────────
 def alert_text(res, url=""):
     lines = [f"📊 *Trade Tribe — Weekly Sector Rotation*", f"_Week ending {res['asof']}_", ""]
@@ -415,6 +465,13 @@ def main():
     if rrg_all:
         with open(os.path.join(OUT, "rrg.json"), "w") as f:
             json.dump(rrg_all, f, separators=(",", ":"))
+    try:
+        stocks_rrg = stock_rrg(daily, cons_map)
+        with open(os.path.join(OUT, "rrg_stocks.json"), "w") as f:
+            json.dump(stocks_rrg, f, separators=(",", ":"))
+        status["stock_rrg_sectors"] = len(stocks_rrg)
+    except Exception as e:
+        print("Stock RRG fail:", e)
     msg = alert_text(res, os.environ.get("DASHBOARD_URL", ""))
     print(msg)
     if not demo and os.environ.get("SEND_ALERT") == "1":

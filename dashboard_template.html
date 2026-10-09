@@ -27,6 +27,7 @@ h1{font-size:20px;margin:4px 0}.sub{color:var(--mut);font-size:13px}
 .it:hover{background:var(--soft)}.it input{margin:0}
 .dot{width:9px;height:9px;border-radius:50%}
 .it .pr{color:var(--mut);font-variant-numeric:tabular-nums}.it .ch{font-variant-numeric:tabular-nums;min-width:48px;text-align:right}
+.drill{border:1px solid var(--line);background:var(--soft);color:#2563eb;border-radius:6px;font-size:10.5px;padding:1px 5px;margin-left:4px;cursor:pointer}
 .grp{padding:5px 8px;font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--mut);background:var(--soft)}
 .ctrl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:6px;font-size:13px}
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
@@ -59,7 +60,11 @@ select,.btn{border:1px solid var(--line);background:var(--card);color:var(--fg);
  <b>Relative Rotation Graph (RRG)</b> <span class="help">· Data: NSE official indices · Benchmark: Nifty 50</span>
  <div class="rrgwrap" style="margin-top:8px">
   <div class="side">
-   <div class="tools">
+   <div class="tools" id="crumb" style="display:none;align-items:center">
+    <button class="btn" id="backBtn">← Sectors</button><button class="btn" id="allBtn">All / None</button>
+    <span id="crumbT" style="font-size:12.5px;font-weight:600;width:100%"></span>
+   </div>
+   <div class="tools" id="chips">
     <span class="chip" data-g="Sectors">Sectors</span><span class="chip" data-g="Broad market">Broad market</span>
     <span class="chip" data-g="core">Main 18</span><span class="chip" data-g="none">Clear</span>
    </div>
@@ -75,7 +80,7 @@ select,.btn{border:1px solid var(--line);background:var(--card);color:var(--fg);
    <svg id="bench"></svg>
    <div class="range"><span id="from"></span><input type="range" id="end" min="0" max="0" value="0"><span id="to"></span></div>
    <svg id="chart"></svg>
-   <div class="help">Sectors ghadi ki ulti disha mein ghoomte hain: 🔵 Improving → 🟢 Leading → 🟡 Weakening → 🔴 Lagging. Line = pichhla safar, teer (▶) = abhi. Slider se purani date dekho, ▶ Play se animation.</div>
+   <div class="help">Sectors ghadi ki ulti disha mein ghoomte hain: 🔵 Improving → 🟢 Leading → 🟡 Weakening → 🔴 Lagging. Line = pichhla safar, teer (▶) = abhi. Slider se purani date dekho, ▶ Play se animation. Kisi sector ke <b>Stocks ›</b> button (ya chart mein uske teer) pe tap karo to us sector ke stocks ka RRG khulega.</div>
   </div>
  </div>
 </div>
@@ -104,56 +109,75 @@ ${s.top.length?`<div class="tops">Top: ${s.top.map(t=>`${t.symbol} ${t.rs>=0?"+"
 
 /* ---------- RRG ---------- */
 const CORE=["Bank","Private Bank","PSU Bank","Fin Services","IT","Auto","Pharma","Healthcare","FMCG","Metal","Realty","Energy","Oil & Gas","Infrastructure","PSE","Media","Consumption","Defence"];
-let tf="weekly", sel=new Set(CORE), playing=null;
+let tf="weekly", mode=null, SX=null, playing=null;
+const selIdx=new Set(CORE), selStk={};
 const TAILS={weekly:[4,8,12,26],daily:[5,10,20,40]};
-const st={weekly:{tail:8,end:null},daily:{tail:10,end:null}};
+const stMap={};
+const st=()=>{const k=(mode||"idx")+":"+tf;if(!stMap[k])stMap[k]={tail:tf==="weekly"?8:10,end:null};return stMap[k]};
+const cur=()=>mode?SX[mode][tf]:R[tf];
+const sel=()=>mode?selStk[mode]:selIdx;
+const benchName=()=>mode?SX[mode].index:"Nifty 50";
 const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const NS="http://www.w3.org/2000/svg";
 const el=(t,a,p)=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);if(p)p.appendChild(e);return e};
+const esc=x=>String(x).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 
-function fillTail(){const s=$("tail");s.innerHTML=TAILS[tf].map(n=>`<option ${n===st[tf].tail?"selected":""} value="${n}">${n} ${tf==="weekly"?"wk":"din"}</option>`).join("")}
+function fillTail(){$("tail").innerHTML=TAILS[tf].map(n=>`<option ${n===st().tail?"selected":""} value="${n}">${n} ${tf==="weekly"?"wk":"din"}</option>`).join("")}
 function headQuad(s,i){return quad(s.rs[i],s.mom[i])}
+function row(s,end,canDrill){const q=headQuad(s,end),ch=s.chg;
+ return `<label class="it"><input type="checkbox" data-n="${esc(s.name)}" ${sel().has(s.name)?"checked":""}><span class="dot" style="background:${C[q]}"></span><span>${esc(s.name)}${canDrill?` <button class="drill" data-k="${esc(s.name)}" title="Is sector ke stocks">Stocks ›</button>`:""}</span><span class="pr">${s.price!=null?s.price.toLocaleString("en-IN",{maximumFractionDigits:s.price<100?2:0}):"–"}</span><span class="ch ${ch>=0?"pos":"neg"}">${ch==null?"":(ch>=0?"+":"")+ch.toFixed(2)+"%"}</span></label>`}
 
 function buildList(){
- const T=R[tf],end=st[tf].end;let h="";
- ["Sectors","Broad market"].forEach(g=>{
-  h+=`<div class="grp">${g.toUpperCase()}</div>`;
-  T.series.filter(s=>s.group===g).forEach(s=>{
-   const q=headQuad(s,end),ch=s.chg;
-   h+=`<label class="it"><input type="checkbox" data-n="${s.name}" ${sel.has(s.name)?"checked":""}><span class="dot" style="background:${C[q]}"></span><span>${s.name}</span><span class="pr">${s.price!=null?s.price.toLocaleString("en-IN",{maximumFractionDigits:0}):"–"}</span><span class="ch ${ch>=0?"pos":"neg"}">${ch==null?"":(ch>=0?"+":"")+ch.toFixed(2)+"%"}</span></label>`});
- });
+ const T=cur(),end=st().end;let h="";
+ $("chips").style.display=mode?"none":"flex";
+ $("crumb").style.display=mode?"flex":"none";
+ if(mode){
+  $("crumbT").textContent=`${mode} ke stocks · vs ${SX[mode].index}`;
+  [...T.series].sort((a,b)=>headQuad(a,end)-headQuad(b,end)||a.name.localeCompare(b.name)).forEach(s=>h+=row(s,end,false));
+ } else {
+  ["Sectors","Broad market"].forEach(g=>{h+=`<div class="grp">${g.toUpperCase()}</div>`;
+   T.series.filter(s=>s.group===g).forEach(s=>h+=row(s,end,g==="Sectors"&&CORE.includes(s.name)))});
+ }
  $("list").innerHTML=h;
- $("list").querySelectorAll("input").forEach(i=>i.onchange=()=>{i.checked?sel.add(i.dataset.n):sel.delete(i.dataset.n);draw()});
+ $("list").querySelectorAll("input").forEach(i=>i.onchange=()=>{i.checked?sel().add(i.dataset.n):sel().delete(i.dataset.n);draw()});
+ $("list").querySelectorAll(".drill").forEach(b=>b.onclick=e=>{e.preventDefault();e.stopPropagation();openSector(b.dataset.k)});
 }
 
+async function openSector(k){
+ stop();
+ if(!SX){$("crumbT").textContent="Loading…";try{SX=await (await fetch("rrg_stocks.json",{cache:"no-store"})).json()}catch(e){alert("Stocks data load nahi hua. Page refresh karke try karo.");return}}
+ if(!SX[k]){alert(k+" ke stocks ka data nahi mila.");return}
+ mode=k;if(!selStk[k])selStk[k]=new Set(SX[k][tf].series.map(s=>s.name));
+ setTF(tf);document.querySelector(".rrgwrap").scrollIntoView({behavior:"smooth",block:"start"});
+}
+function back(){stop();mode=null;setTF(tf)}
+
 function drawBench(){
- const T=R[tf],svg=$("bench"),W=svg.clientWidth||600,H=56;svg.setAttribute("viewBox",`0 0 ${W} ${H}`);svg.innerHTML="";
+ const T=cur(),svg=$("bench"),W=svg.clientWidth||600,H=56;svg.setAttribute("viewBox",`0 0 ${W} ${H}`);svg.innerHTML="";
  const v=T.bench,n=v.length,vals=v.filter(x=>x!=null),mn=Math.min(...vals),mx=Math.max(...vals);
  const X=i=>4+i*(W-8)/(n-1),Y=x=>H-4-(x-mn)/(mx-mn||1)*(H-12);
- const end=st[tf].end,start=Math.max(0,end-st[tf].tail+1);
+ const end=st().end,start=Math.max(0,end-st().tail+1);
  el("rect",{x:X(start),y:0,width:Math.max(2,X(end)-X(start)),height:H,fill:css("--soft")},svg);
  let d="";v.forEach((x,i)=>{if(x!=null)d+=(d?"L":"M")+X(i).toFixed(1)+","+Y(x).toFixed(1)});
  el("path",{d,fill:"none",stroke:"#3b82f6","stroke-width":1.6},svg);
- const t=el("text",{x:6,y:12,"font-size":11,fill:css("--mut")},svg);t.textContent="Nifty 50";
+ const t=el("text",{x:6,y:12,"font-size":11,fill:css("--mut")},svg);t.textContent=benchName();
 }
 
 function draw(){
- const T=R[tf],end=st[tf].end,tail=st[tf].tail,start=Math.max(0,end-tail+1);
+ const T=cur(),end=st().end,tail=st().tail,start=Math.max(0,end-tail+1);
  $("from").textContent=T.dates[start];$("to").textContent=T.dates[end];
  drawBench();
  const svg=$("chart"),W=svg.clientWidth||700,H=Math.max(380,Math.min(640,W*0.72));
  svg.setAttribute("viewBox",`0 0 ${W} ${H}`);svg.style.height=H+"px";svg.innerHTML="";
- const vis=T.series.filter(s=>sel.has(s.name));
+ const vis=T.series.filter(s=>sel().has(s.name));
  let xs=[100],ys=[100];
  vis.forEach(s=>{for(let i=start;i<=end;i++){if(s.rs[i]!=null&&s.mom[i]!=null){xs.push(s.rs[i]);ys.push(s.mom[i])}}});
  let x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys);
  const px=Math.max((x1-x0)*0.08,0.4),py=Math.max((y1-y0)*0.08,0.4);x0-=px;x1+=px;y0-=py;y1+=py;
  const L=44,Rt=12,Tp=10,B=34,X=v=>L+(v-x0)/(x1-x0)*(W-L-Rt),Y=v=>Tp+(y1-v)/(y1-y0)*(H-Tp-B);
  const cx=X(100),cy=Y(100);
- // quadrants
  [[L,Tp,cx-L,cy-Tp,"--qimp"],[cx,Tp,W-Rt-cx,cy-Tp,"--qlead"],[cx,cy,W-Rt-cx,H-B-cy,"--qweak"],[L,cy,cx-L,H-B-cy,"--qlag"]]
   .forEach(r=>el("rect",{x:r[0],y:r[1],width:Math.max(0,r[2]),height:Math.max(0,r[3]),fill:css(r[4])},svg));
- // grid + axes
  const step=v=>{const r=v/6,p=Math.pow(10,Math.floor(Math.log10(r))),m=r/p;return(m<1.5?1:m<3.5?2:5)*p};
  const sx=step(x1-x0),sy=step(y1-y0),gc=css("--line"),mc=css("--mut");
  for(let v=Math.ceil(x0/sx)*sx;v<=x1;v+=sx){el("line",{x1:X(v),x2:X(v),y1:Tp,y2:H-B,stroke:gc,"stroke-width":.6},svg);const t=el("text",{x:X(v),y:H-B+14,"font-size":10.5,fill:mc,"text-anchor":"middle"},svg);t.textContent=v.toFixed(sx<1?1:0)}
@@ -162,9 +186,8 @@ function draw(){
  el("line",{x1:L,x2:W-Rt,y1:cy,y2:cy,stroke:css("--fg"),"stroke-width":1,opacity:.55},svg);
  [["IMPROVING",L+6,Tp+14,"start",4],["LEADING",W-Rt-6,Tp+14,"end",1],["WEAKENING",W-Rt-6,H-B-6,"end",2],["LAGGING",L+6,H-B-6,"start",3]]
   .forEach(a=>{const t=el("text",{x:a[1],y:a[2],"font-size":11.5,"font-weight":700,fill:C[a[4]],"text-anchor":a[3],opacity:.85},svg);t.textContent=a[0]});
- let t=el("text",{x:(L+W-Rt)/2,y:H-4,"font-size":11,fill:mc,"text-anchor":"middle"},svg);t.textContent="RS-Ratio (Nifty se taqat) →";
+ let t=el("text",{x:(L+W-Rt)/2,y:H-4,"font-size":11,fill:mc,"text-anchor":"middle"},svg);t.textContent=`RS-Ratio (${benchName()} se taqat) →`;
  t=el("text",{x:12,y:(Tp+H-B)/2,"font-size":11,fill:mc,"text-anchor":"middle",transform:`rotate(-90 12 ${(Tp+H-B)/2})`},svg);t.textContent="RS-Momentum →";
- // tails
  const labels=[];
  vis.forEach(s=>{
   const pts=[];for(let i=start;i<=end;i++){if(s.rs[i]!=null&&s.mom[i]!=null)pts.push([X(s.rs[i]),Y(s.mom[i]),i])}
@@ -172,7 +195,6 @@ function draw(){
   const q=headQuad(s,end)||quad(s.rs[pts.at(-1)[2]],s.mom[pts.at(-1)[2]]),col=C[q];
   const g=el("g",{},svg);
   if(pts.length>1){
-   // smooth path (Catmull-Rom -> bezier)
    let d=`M${pts[0][0]},${pts[0][1]}`;
    for(let i=0;i<pts.length-1;i++){const p0=pts[i-1]||pts[i],p1=pts[i],p2=pts[i+1],p3=pts[i+2]||p2;
     d+=`C${p1[0]+(p2[0]-p0[0])/6},${p1[1]+(p2[1]-p0[1])/6} ${p2[0]-(p3[0]-p1[0])/6},${p2[1]-(p3[1]-p1[1])/6} ${p2[0]},${p2[1]}`}
@@ -184,33 +206,35 @@ function draw(){
   el("path",{d:`M${h[0]+Math.cos(ang)*3},${h[1]+Math.sin(ang)*3}L${h[0]-a*Math.cos(ang-0.45)},${h[1]-a*Math.sin(ang-0.45)}L${h[0]-a*Math.cos(ang+0.45)},${h[1]-a*Math.sin(ang+0.45)}Z`,fill:col},g);
   const hit=el("circle",{cx:h[0],cy:h[1],r:11,fill:"transparent",style:"cursor:pointer"},g);
   const i=h[2];
-  const show=e=>{const tp=$("tip");tp.innerHTML=`<b>${s.full}</b><br>${T.dates[i]}<br>RS ${s.rs[i].toFixed(2)} · Mom ${s.mom[i].toFixed(2)}<br><span style="color:${col};font-weight:700">${N[q]}</span>`;tp.style.display="block";
+  const show=e=>{const tp=$("tip");tp.innerHTML=`<b>${esc(s.full)}</b><br>${T.dates[i]}<br>RS ${s.rs[i].toFixed(2)} · Mom ${s.mom[i].toFixed(2)}<br><span style="color:${col};font-weight:700">${N[q]}</span>${!mode&&CORE.includes(s.name)?"<br><i>Tap: stocks dekho</i>":""}`;tp.style.display="block";
    const ev=e.touches?e.touches[0]:e;tp.style.left=Math.min(ev.clientX+12,innerWidth-190)+"px";tp.style.top=(ev.clientY+12)+"px"};
   hit.addEventListener("mousemove",show);hit.addEventListener("mouseleave",()=>$("tip").style.display="none");hit.addEventListener("touchstart",show,{passive:true});
-  labels.push({x:h[0],y:h[1],txt:s.name,col});
+  if(!mode&&CORE.includes(s.name))hit.addEventListener("click",()=>{$("tip").style.display="none";openSector(s.name)});
+  labels.push({x:h[0],y:h[1],txt:s.name});
  });
  if($("lbl").checked){
-  // simple overlap avoidance
   const placed=[];labels.sort((a,b)=>a.y-b.y).forEach(l=>{let y=l.y-8;for(const p of placed){if(Math.abs(p.x-l.x)<70&&Math.abs(p.y-y)<11)y=p.y-11}
    placed.push({x:l.x,y});const t=el("text",{x:l.x+6,y:y,"font-size":10.5,fill:css("--fg"),"paint-order":"stroke",stroke:css("--card"),"stroke-width":3},svg);t.textContent=l.txt});
  }
 }
 
 function setTF(n){tf=n;document.querySelectorAll("#tf button").forEach(b=>b.classList.toggle("on",b.dataset.tf===n));
- const T=R[tf];if(st[tf].end==null)st[tf].end=T.dates.length-1;
- $("end").max=T.dates.length-1;$("end").min=1;$("end").value=st[tf].end;fillTail();buildList();draw()}
+ const T=cur();if(st().end==null||st().end>T.dates.length-1)st().end=T.dates.length-1;
+ $("end").max=T.dates.length-1;$("end").min=1;$("end").value=st().end;fillTail();buildList();draw()}
 document.querySelectorAll("#tf button").forEach(b=>b.onclick=()=>{stop();setTF(b.dataset.tf)});
-$("tail").onchange=e=>{st[tf].tail=+e.target.value;draw()};
-$("end").oninput=e=>{stop();st[tf].end=+e.target.value;buildList();draw()};
+$("tail").onchange=e=>{st().tail=+e.target.value;draw()};
+$("end").oninput=e=>{stop();st().end=+e.target.value;buildList();draw()};
 $("lbl").onchange=draw;
-document.querySelectorAll(".chip").forEach(c=>c.onclick=()=>{const g=c.dataset.g,T=R[tf];
- if(g==="none")sel.clear();else if(g==="core")sel=new Set(CORE);else{const names=T.series.filter(s=>s.group===g).map(s=>s.name);const all=names.every(n=>sel.has(n));names.forEach(n=>all?sel.delete(n):sel.add(n))}
+$("backBtn").onclick=back;
+$("allBtn").onclick=()=>{const T=cur(),S=sel(),all=T.series.every(s=>S.has(s.name));T.series.forEach(s=>all?S.delete(s.name):S.add(s.name));buildList();draw()};
+document.querySelectorAll(".chip[data-g]").forEach(c=>c.onclick=()=>{const g=c.dataset.g,T=R[tf];
+ if(g==="none")selIdx.clear();else if(g==="core"){selIdx.clear();CORE.forEach(n=>selIdx.add(n))}else{const names=T.series.filter(s=>s.group===g).map(s=>s.name);const all=names.every(n=>selIdx.has(n));names.forEach(n=>all?selIdx.delete(n):selIdx.add(n))}
  buildList();draw()});
 function stop(){if(playing){clearInterval(playing);playing=null;$("play").textContent="▶ Play"}}
-$("play").onclick=()=>{if(playing)return stop();const T=R[tf],last=T.dates.length-1;
- if(st[tf].end>=last)st[tf].end=Math.min(last,st[tf].tail);
+$("play").onclick=()=>{if(playing)return stop();const T=cur(),last=T.dates.length-1;
+ if(st().end>=last)st().end=Math.min(last,st().tail);
  $("play").textContent="⏸ Pause";
- playing=setInterval(()=>{if(st[tf].end>=last){stop();return}st[tf].end++;$("end").value=st[tf].end;buildList();draw()},tf==="weekly"?550:220)};
+ playing=setInterval(()=>{if(st().end>=last){stop();return}st().end++;$("end").value=st().end;buildList();draw()},tf==="weekly"?550:220)};
 addEventListener("resize",()=>draw());
 if(R&&R.weekly)setTF("weekly");else document.querySelector(".rrgwrap").innerHTML='<div class="help">RRG data abhi available nahi hai.</div>';
 </script>
