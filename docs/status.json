@@ -43,5 +43,15 @@
  "nse_last": "2026-10-09",
  "benchmark": "NSE: Nifty 50",
  "rrg_indices": 48,
- "sectors_ok": 18
+ "sectors_ok": 18,
+ "stock_rrg_sectors": 18,
+ "telegram": {
+  "token_set": true,
+  "chat_set": true,
+  "token_shape_ok": true,
+  "getMe_ok": true,
+  "bot": "SectorRotateBot",
+  "send_status": 200,
+  "photo_status": 200
+ }
 }
