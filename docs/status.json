@@ -39,19 +39,9 @@
   "Consumption": 30,
   "Defence": 22
  },
- "nse_days": 739,
- "nse_last": "2026-10-09",
+ "nse_days": 740,
+ "nse_last": "2026-10-12",
  "benchmark": "NSE: Nifty 50",
  "rrg_indices": 48,
- "sectors_ok": 18,
- "stock_rrg_sectors": 18,
- "telegram": {
-  "token_set": true,
-  "chat_set": true,
-  "token_shape_ok": true,
-  "getMe_ok": true,
-  "bot": "SectorRotateBot",
-  "send_status": 200,
-  "photo_status": 200
- }
+ "sectors_ok": 18
 }
