@@ -1,45 +1,45 @@
 {
- "asof": "12 Oct 2026",
- "generated": "13 Oct 2026, 03:38 AM IST",
+ "asof": "13 Oct 2026",
+ "generated": "14 Oct 2026, 01:45 AM IST",
  "sectors": [
   {
    "name": "Media",
-   "ratio": 105.72,
-   "mom": 103.61,
+   "ratio": 105.16,
+   "mom": 103.05,
    "phase": 1,
    "prev_phase": 1,
-   "perf3m": 14.9,
+   "perf3m": 13.9,
    "trend_up": true,
-   "breadth": 30.0,
+   "breadth": 40.0,
    "top": [
     {
-     "symbol": "SUNTV",
-     "rs": 30.7,
-     "ret3m": 30.1,
-     "above50": true
-    },
-    {
      "symbol": "PVRINOX",
-     "rs": 29.4,
-     "ret3m": 31.2,
+     "rs": 33.9,
+     "ret3m": 39.2,
      "above50": true
     },
     {
      "symbol": "NAZARA",
-     "rs": 26.3,
-     "ret3m": 24.2,
+     "rs": 32.6,
+     "ret3m": 30.5,
+     "above50": true
+    },
+    {
+     "symbol": "SUNTV",
+     "rs": 27.2,
+     "ret3m": 28.3,
      "above50": true
     },
     {
      "symbol": "MPSLTD",
-     "rs": 18.7,
-     "ret3m": 23.1,
+     "rs": 18.4,
+     "ret3m": 25.4,
      "above50": false
     },
     {
      "symbol": "SAREGAMA",
-     "rs": 12.3,
-     "ret3m": 0.4,
+     "rs": 13.0,
+     "ret3m": 1.5,
      "above50": false
     }
    ],
@@ -73,49 +73,49 @@
      101.43
     ],
     [
-     105.72,
-     103.61
+     105.16,
+     103.05
     ]
    ]
   },
   {
    "name": "Pvt Bank",
-   "ratio": 103.62,
-   "mom": 101.96,
+   "ratio": 103.22,
+   "mom": 101.57,
    "phase": 1,
    "prev_phase": 1,
-   "perf3m": 3.2,
-   "trend_up": false,
+   "perf3m": 2.5,
+   "trend_up": true,
    "breadth": 30.0,
    "top": [
     {
      "symbol": "RBLBANK",
-     "rs": 20.6,
-     "ret3m": 10.9,
+     "rs": 18.3,
+     "ret3m": 12.3,
      "above50": true
     },
     {
      "symbol": "KOTAKBANK",
-     "rs": 18.8,
-     "ret3m": 16.7,
+     "rs": 17.4,
+     "ret3m": 17.4,
      "above50": true
     },
     {
      "symbol": "FEDERALBNK",
-     "rs": 8.8,
-     "ret3m": 1.1,
+     "rs": 6.3,
+     "ret3m": 0.5,
      "above50": false
     },
     {
      "symbol": "IDFCFIRSTB",
-     "rs": 8.3,
-     "ret3m": 0.6,
+     "rs": 6.3,
+     "ret3m": 0.3,
      "above50": false
     },
     {
      "symbol": "ICICIBANK",
-     "rs": 6.9,
-     "ret3m": -2.9,
+     "rs": 4.1,
+     "ret3m": -4.6,
      "above50": false
     }
    ],
@@ -149,50 +149,50 @@
      102.03
     ],
     [
-     103.62,
-     101.96
+     103.22,
+     101.57
     ]
    ]
   },
   {
    "name": "FMCG",
-   "ratio": 100.53,
-   "mom": 103.05,
+   "ratio": 100.44,
+   "mom": 102.95,
    "phase": 1,
    "prev_phase": 1,
-   "perf3m": -1.4,
+   "perf3m": -1.6,
    "trend_up": false,
    "breadth": 20.0,
    "top": [
     {
      "symbol": "RADICO",
-     "rs": 21.4,
-     "ret3m": 12.6,
+     "rs": 19.1,
+     "ret3m": 11.6,
      "above50": true
     },
     {
      "symbol": "UNITDSPR",
-     "rs": 5.6,
-     "ret3m": -1.5,
+     "rs": 2.5,
+     "ret3m": -1.7,
      "above50": false
     },
     {
      "symbol": "MARICO",
-     "rs": 1.9,
+     "rs": -0.2,
      "ret3m": -6.9,
      "above50": false
     },
     {
-     "symbol": "ITC",
-     "rs": 0.6,
-     "ret3m": -3.5,
+     "symbol": "NESTLEIND",
+     "rs": -2.1,
+     "ret3m": -7.0,
      "above50": false
     },
     {
-     "symbol": "NESTLEIND",
-     "rs": 0.2,
+     "symbol": "VBL",
+     "rs": -3.4,
      "ret3m": -6.6,
-     "above50": false
+     "above50": true
     }
    ],
    "tail": [
@@ -225,201 +225,49 @@
      103.82
     ],
     [
-     100.53,
-     103.05
-    ]
-   ]
-  },
-  {
-   "name": "Fin Services",
-   "ratio": 101.46,
-   "mom": 101.36,
-   "phase": 1,
-   "prev_phase": 1,
-   "perf3m": 0.5,
-   "trend_up": false,
-   "breadth": 25.0,
-   "top": [
-    {
-     "symbol": "KOTAKBANK",
-     "rs": 18.8,
-     "ret3m": 16.7,
-     "above50": true
-    },
-    {
-     "symbol": "LICHSGFIN",
-     "rs": 10.0,
-     "ret3m": 2.4,
-     "above50": true
-    },
-    {
-     "symbol": "ICICIBANK",
-     "rs": 6.9,
-     "ret3m": -2.9,
-     "above50": false
-    },
-    {
-     "symbol": "ICICIGI",
-     "rs": 6.4,
-     "ret3m": -5.5,
-     "above50": true
-    },
-    {
-     "symbol": "AXISBANK",
-     "rs": 4.9,
-     "ret3m": -4.4,
-     "above50": true
-    }
-   ],
-   "tail": [
-    [
-     99.07,
-     99.07
-    ],
-    [
-     99.47,
-     100.35
-    ],
-    [
-     99.82,
-     101.22
-    ],
-    [
-     100.1,
-     101.38
-    ],
-    [
-     99.97,
-     100.9
-    ],
-    [
-     100.37,
-     100.9
-    ],
-    [
-     101.11,
-     101.29
-    ],
-    [
-     101.46,
-     101.36
-    ]
-   ]
-  },
-  {
-   "name": "Bank",
-   "ratio": 101.86,
-   "mom": 100.77,
-   "phase": 1,
-   "prev_phase": 1,
-   "perf3m": 1.9,
-   "trend_up": false,
-   "breadth": 21.0,
-   "top": [
-    {
-     "symbol": "KOTAKBANK",
-     "rs": 18.8,
-     "ret3m": 16.7,
-     "above50": true
-    },
-    {
-     "symbol": "PNB",
-     "rs": 13.5,
-     "ret3m": 11.4,
-     "above50": true
-    },
-    {
-     "symbol": "FEDERALBNK",
-     "rs": 8.8,
-     "ret3m": 1.1,
-     "above50": false
-    },
-    {
-     "symbol": "IDFCFIRSTB",
-     "rs": 8.3,
-     "ret3m": 0.6,
-     "above50": false
-    },
-    {
-     "symbol": "UNIONBANK",
-     "rs": 7.3,
-     "ret3m": 1.4,
-     "above50": false
-    }
-   ],
-   "tail": [
-    [
-     99.7,
-     99.65
-    ],
-    [
-     100.29,
-     100.97
-    ],
-    [
-     100.92,
-     101.82
-    ],
-    [
-     101.08,
-     101.57
-    ],
-    [
-     100.92,
-     101.22
-    ],
-    [
-     101.3,
-     101.0
-    ],
-    [
-     101.8,
-     100.87
-    ],
-    [
-     101.86,
-     100.77
+     100.44,
+     102.95
     ]
    ]
   },
   {
    "name": "IT",
-   "ratio": 100.19,
-   "mom": 100.02,
+   "ratio": 101.8,
+   "mom": 101.63,
    "phase": 1,
    "prev_phase": 3,
-   "perf3m": 5.1,
+   "perf3m": 8.7,
    "trend_up": false,
    "breadth": 20.0,
    "top": [
     {
      "symbol": "COFORGE",
-     "rs": 26.1,
-     "ret3m": 22.0,
+     "rs": 22.3,
+     "ret3m": 20.7,
      "above50": true
     },
     {
      "symbol": "PERSISTENT",
-     "rs": 18.1,
-     "ret3m": 12.9,
+     "rs": 16.5,
+     "ret3m": 14.4,
      "above50": true
     },
     {
      "symbol": "MPHASIS",
-     "rs": 9.6,
-     "ret3m": -0.5,
+     "rs": 7.5,
+     "ret3m": 0.6,
+     "above50": false
+    },
+    {
+     "symbol": "HCLTECH",
+     "rs": 4.7,
+     "ret3m": 5.8,
      "above50": false
     },
     {
      "symbol": "TECHM",
-     "rs": 7.8,
-     "ret3m": 2.0,
-     "above50": false
-    },
-    {
-     "symbol": "OFSS",
-     "rs": 6.3,
-     "ret3m": -9.8,
+     "rs": 3.0,
+     "ret3m": -1.8,
      "above50": false
     }
    ],
@@ -453,505 +301,201 @@
      98.02
     ],
     [
-     100.19,
-     100.02
+     101.8,
+     101.63
     ]
    ]
   },
   {
-   "name": "Pharma",
-   "ratio": 103.25,
-   "mom": 99.4,
-   "phase": 2,
+   "name": "Fin Services",
+   "ratio": 101.4,
+   "mom": 101.29,
+   "phase": 1,
    "prev_phase": 1,
-   "perf3m": 9.8,
-   "trend_up": true,
+   "perf3m": 0.4,
+   "trend_up": false,
    "breadth": 30.0,
    "top": [
     {
-     "symbol": "LAURUSLABS",
-     "rs": 35.9,
-     "ret3m": 30.5,
-     "above50": true
-    },
-    {
-     "symbol": "GLAND",
-     "rs": 32.9,
-     "ret3m": 24.0,
-     "above50": true
-    },
-    {
-     "symbol": "DIVISLAB",
-     "rs": 29.7,
-     "ret3m": 30.5,
-     "above50": true
-    },
-    {
-     "symbol": "SAILIFE",
-     "rs": 21.7,
-     "ret3m": 17.3,
-     "above50": false
-    },
-    {
-     "symbol": "IPCALAB",
+     "symbol": "KOTAKBANK",
      "rs": 17.4,
-     "ret3m": 4.4,
+     "ret3m": 17.4,
+     "above50": true
+    },
+    {
+     "symbol": "LICHSGFIN",
+     "rs": 11.3,
+     "ret3m": 5.3,
+     "above50": true
+    },
+    {
+     "symbol": "ICICIBANK",
+     "rs": 4.1,
+     "ret3m": -4.6,
+     "above50": false
+    },
+    {
+     "symbol": "ICICIGI",
+     "rs": 3.8,
+     "ret3m": -7.7,
+     "above50": true
+    },
+    {
+     "symbol": "HDFCLIFE",
+     "rs": 3.5,
+     "ret3m": -1.7,
      "above50": true
     }
    ],
    "tail": [
     [
-     103.13,
-     100.08
+     99.07,
+     99.07
     ],
     [
-     102.78,
-     100.04
+     99.47,
+     100.35
     ],
     [
-     103.47,
-     100.85
+     99.82,
+     101.22
     ],
     [
-     103.87,
-     101.5
+     100.1,
+     101.38
     ],
     [
-     104.58,
-     101.41
+     99.97,
+     100.9
     ],
     [
-     104.75,
-     101.92
-    ],
-    [
-     103.61,
-     100.14
-    ],
-    [
-     103.25,
-     99.4
-    ]
-   ]
-  },
-  {
-   "name": "PSU Bank",
-   "ratio": 100.61,
-   "mom": 99.68,
-   "phase": 2,
-   "prev_phase": 2,
-   "perf3m": 3.9,
-   "trend_up": false,
-   "breadth": 17.0,
-   "top": [
-    {
-     "symbol": "PNB",
-     "rs": 13.5,
-     "ret3m": 11.4,
-     "above50": true
-    },
-    {
-     "symbol": "MAHABANK",
-     "rs": 8.8,
-     "ret3m": 4.6,
-     "above50": true
-    },
-    {
-     "symbol": "UNIONBANK",
-     "rs": 7.3,
-     "ret3m": 1.4,
-     "above50": false
-    },
-    {
-     "symbol": "INDIANB",
-     "rs": 4.6,
-     "ret3m": -0.4,
-     "above50": false
-    },
-    {
-     "symbol": "BANKINDIA",
-     "rs": 1.9,
-     "ret3m": -5.2,
-     "above50": false
-    }
-   ],
-   "tail": [
-    [
-     100.91,
-     102.37
-    ],
-    [
-     101.09,
-     101.13
+     100.37,
+     100.9
     ],
     [
      101.11,
-     100.38
+     101.29
     ],
     [
-     100.94,
-     100.2
-    ],
-    [
-     100.96,
-     100.04
-    ],
-    [
-     100.3,
-     99.22
-    ],
-    [
-     100.69,
-     99.58
-    ],
-    [
-     100.61,
-     99.68
+     101.4,
+     101.29
     ]
    ]
   },
   {
-   "name": "Energy",
-   "ratio": 100.31,
-   "mom": 99.64,
-   "phase": 2,
+   "name": "Bank",
+   "ratio": 101.6,
+   "mom": 100.51,
+   "phase": 1,
    "prev_phase": 1,
-   "perf3m": -0.6,
+   "perf3m": 1.4,
    "trend_up": false,
-   "breadth": 15.0,
+   "breadth": 21.0,
    "top": [
     {
-     "symbol": "AEGISLOG",
-     "rs": 34.2,
-     "ret3m": 13.6,
-     "above50": true
-    },
-    {
-     "symbol": "TDPOWERSYS",
-     "rs": 30.5,
-     "ret3m": 41.2,
-     "above50": true
-    },
-    {
-     "symbol": "BHEL",
-     "rs": 14.9,
-     "ret3m": 7.7,
-     "above50": true
-    },
-    {
-     "symbol": "CASTROLIND",
-     "rs": 13.4,
-     "ret3m": 9.6,
-     "above50": true
-    },
-    {
-     "symbol": "PETRONET",
-     "rs": 11.1,
-     "ret3m": 5.6,
-     "above50": true
-    }
-   ],
-   "tail": [
-    [
-     97.72,
-     100.93
-    ],
-    [
-     98.72,
-     102.22
-    ],
-    [
-     100.09,
-     103.15
-    ],
-    [
-     100.68,
-     103.4
-    ],
-    [
-     100.96,
-     103.32
-    ],
-    [
-     101.29,
-     102.6
-    ],
-    [
-     100.39,
-     100.31
-    ],
-    [
-     100.31,
-     99.64
-    ]
-   ]
-  },
-  {
-   "name": "Healthcare",
-   "ratio": 101.65,
-   "mom": 98.81,
-   "phase": 2,
-   "prev_phase": 2,
-   "perf3m": 5.4,
-   "trend_up": true,
-   "breadth": 30.0,
-   "top": [
-    {
-     "symbol": "LAURUSLABS",
-     "rs": 35.9,
-     "ret3m": 30.5,
-     "above50": true
-    },
-    {
-     "symbol": "GLAND",
-     "rs": 32.9,
-     "ret3m": 24.0,
-     "above50": true
-    },
-    {
-     "symbol": "DIVISLAB",
-     "rs": 29.7,
-     "ret3m": 30.5,
-     "above50": true
-    },
-    {
-     "symbol": "IPCALAB",
+     "symbol": "KOTAKBANK",
      "rs": 17.4,
-     "ret3m": 4.4,
+     "ret3m": 17.4,
      "above50": true
     },
     {
-     "symbol": "AUROPHARMA",
-     "rs": 15.9,
-     "ret3m": 9.0,
-     "above50": true
-    }
-   ],
-   "tail": [
-    [
-     101.66,
-     99.14
-    ],
-    [
-     101.25,
-     99.29
-    ],
-    [
-     102.19,
-     100.82
-    ],
-    [
-     102.88,
-     101.96
-    ],
-    [
-     103.49,
-     101.8
-    ],
-    [
-     103.33,
-     102.05
-    ],
-    [
-     102.13,
-     99.94
-    ],
-    [
-     101.65,
-     98.81
-    ]
-   ]
-  },
-  {
-   "name": "Defence",
-   "ratio": 100.36,
-   "mom": 98.5,
-   "phase": 2,
-   "prev_phase": 2,
-   "perf3m": 5.7,
-   "trend_up": true,
-   "breadth": 41.0,
-   "top": [
-    {
-     "symbol": "SIGMAADV",
-     "rs": 84.5,
-     "ret3m": 75.9,
+     "symbol": "PNB",
+     "rs": 10.6,
+     "ret3m": 9.7,
      "above50": true
     },
     {
-     "symbol": "UNIMECH",
-     "rs": 45.0,
-     "ret3m": 44.3,
-     "above50": true
-    },
-    {
-     "symbol": "AEQUS",
-     "rs": 29.7,
-     "ret3m": 12.7,
-     "above50": true
-    },
-    {
-     "symbol": "DYNAMATECH",
-     "rs": 26.1,
-     "ret3m": 29.0,
-     "above50": true
-    },
-    {
-     "symbol": "AXISCADES",
-     "rs": 22.8,
-     "ret3m": 27.1,
-     "above50": true
-    }
-   ],
-   "tail": [
-    [
-     102.27,
-     102.77
-    ],
-    [
-     102.42,
-     101.9
-    ],
-    [
-     103.41,
-     101.7
-    ],
-    [
-     101.89,
-     99.62
-    ],
-    [
-     101.57,
-     99.32
-    ],
-    [
-     101.42,
-     99.01
-    ],
-    [
-     100.15,
-     96.85
-    ],
-    [
-     100.36,
-     98.5
-    ]
-   ]
-  },
-  {
-   "name": "PSE",
-   "ratio": 99.89,
-   "mom": 99.39,
-   "phase": 3,
-   "prev_phase": 3,
-   "perf3m": -0.4,
-   "trend_up": false,
-   "breadth": 5.0,
-   "top": [
-    {
-     "symbol": "BHEL",
-     "rs": 14.9,
-     "ret3m": 7.7,
-     "above50": true
-    },
-    {
-     "symbol": "HAL",
-     "rs": 8.4,
-     "ret3m": 5.0,
+     "symbol": "FEDERALBNK",
+     "rs": 6.3,
+     "ret3m": 0.5,
      "above50": false
     },
     {
-     "symbol": "GAIL",
-     "rs": 4.7,
-     "ret3m": -2.6,
+     "symbol": "IDFCFIRSTB",
+     "rs": 6.3,
+     "ret3m": 0.3,
      "above50": false
     },
     {
-     "symbol": "SAIL",
-     "rs": 2.9,
-     "ret3m": 4.4,
-     "above50": false
-    },
-    {
-     "symbol": "COALINDIA",
-     "rs": 2.7,
-     "ret3m": -1.9,
+     "symbol": "UNIONBANK",
+     "rs": 4.5,
+     "ret3m": -0.6,
      "above50": false
     }
    ],
    "tail": [
     [
-     98.1,
-     100.38
+     99.7,
+     99.65
     ],
     [
-     98.9,
-     101.4
+     100.29,
+     100.97
     ],
     [
-     100.23,
-     102.5
+     100.92,
+     101.82
     ],
     [
-     100.51,
-     102.52
+     101.08,
+     101.57
     ],
     [
-     100.9,
-     102.86
+     100.92,
+     101.22
     ],
     [
-     100.83,
-     101.96
+     101.3,
+     101.0
     ],
     [
-     99.92,
-     99.7
+     101.8,
+     100.87
     ],
     [
-     99.89,
-     99.39
+     101.6,
+     100.51
     ]
    ]
   },
   {
    "name": "Realty",
-   "ratio": 98.35,
-   "mom": 99.7,
-   "phase": 3,
+   "ratio": 98.72,
+   "mom": 100.08,
+   "phase": 4,
    "prev_phase": 3,
-   "perf3m": -3.7,
-   "trend_up": false,
+   "perf3m": -3.0,
+   "trend_up": true,
    "breadth": 0.0,
    "top": [
     {
      "symbol": "DLF",
-     "rs": 9.8,
-     "ret3m": -2.2,
-     "above50": false
-    },
-    {
-     "symbol": "ANANTRAJ",
-     "rs": 7.6,
-     "ret3m": -0.3,
-     "above50": false
-    },
-    {
-     "symbol": "LODHA",
-     "rs": 7.5,
-     "ret3m": -6.9,
+     "rs": 8.2,
+     "ret3m": 0.1,
      "above50": false
     },
     {
      "symbol": "BRIGADE",
-     "rs": 3.2,
-     "ret3m": -1.0,
+     "rs": 6.9,
+     "ret3m": 3.4,
      "above50": false
     },
     {
-     "symbol": "OBEROIRLTY",
-     "rs": 2.6,
-     "ret3m": -11.3,
+     "symbol": "LODHA",
+     "rs": 6.0,
+     "ret3m": -7.7,
+     "above50": false
+    },
+    {
+     "symbol": "ANANTRAJ",
+     "rs": 5.5,
+     "ret3m": -0.5,
+     "above50": false
+    },
+    {
+     "symbol": "PHOENIXLTD",
+     "rs": 2.4,
+     "ret3m": -13.6,
      "above50": false
     }
    ],
@@ -985,126 +529,506 @@
      98.94
     ],
     [
-     98.35,
-     99.7
+     98.72,
+     100.08
     ]
    ]
   },
   {
-   "name": "Oil & Gas",
-   "ratio": 99.6,
-   "mom": 98.68,
-   "phase": 3,
-   "prev_phase": 3,
-   "perf3m": -0.7,
-   "trend_up": false,
-   "breadth": 27.0,
+   "name": "Pharma",
+   "ratio": 102.51,
+   "mom": 98.69,
+   "phase": 2,
+   "prev_phase": 1,
+   "perf3m": 8.3,
+   "trend_up": true,
+   "breadth": 25.0,
    "top": [
     {
-     "symbol": "AEGISLOG",
-     "rs": 34.2,
-     "ret3m": 13.6,
+     "symbol": "LAURUSLABS",
+     "rs": 35.1,
+     "ret3m": 33.1,
      "above50": true
     },
     {
-     "symbol": "CHENNPETRO",
-     "rs": 31.9,
-     "ret3m": 39.8,
+     "symbol": "GLAND",
+     "rs": 30.9,
+     "ret3m": 25.8,
      "above50": true
     },
     {
-     "symbol": "AEGISVOPAK",
-     "rs": 20.6,
-     "ret3m": 1.5,
+     "symbol": "DIVISLAB",
+     "rs": 28.3,
+     "ret3m": 30.1,
+     "above50": true
+    },
+    {
+     "symbol": "SAILIFE",
+     "rs": 18.1,
+     "ret3m": 16.5,
      "above50": false
     },
     {
-     "symbol": "CASTROLIND",
-     "rs": 13.4,
-     "ret3m": 9.6,
-     "above50": true
-    },
-    {
-     "symbol": "PETRONET",
-     "rs": 11.1,
-     "ret3m": 5.6,
+     "symbol": "AUROPHARMA",
+     "rs": 14.7,
+     "ret3m": 10.1,
      "above50": true
     }
    ],
    "tail": [
     [
-     99.36,
-     100.3
+     103.13,
+     100.08
     ],
     [
-     100.35,
-     101.25
+     102.78,
+     100.04
     ],
     [
-     100.68,
-     101.46
+     103.47,
+     100.85
     ],
     [
-     100.93,
-     101.43
+     103.87,
+     101.5
     ],
     [
-     101.04,
+     104.58,
+     101.41
+    ],
+    [
+     104.75,
+     101.92
+    ],
+    [
+     103.61,
+     100.14
+    ],
+    [
+     102.51,
+     98.69
+    ]
+   ]
+  },
+  {
+   "name": "PSU Bank",
+   "ratio": 100.54,
+   "mom": 99.61,
+   "phase": 2,
+   "prev_phase": 2,
+   "perf3m": 3.8,
+   "trend_up": false,
+   "breadth": 17.0,
+   "top": [
+    {
+     "symbol": "PNB",
+     "rs": 10.6,
+     "ret3m": 9.7,
+     "above50": true
+    },
+    {
+     "symbol": "MAHABANK",
+     "rs": 6.7,
+     "ret3m": 3.6,
+     "above50": true
+    },
+    {
+     "symbol": "UNIONBANK",
+     "rs": 4.5,
+     "ret3m": -0.6,
+     "above50": false
+    },
+    {
+     "symbol": "INDIANB",
+     "rs": 1.1,
+     "ret3m": -2.0,
+     "above50": false
+    },
+    {
+     "symbol": "BANKINDIA",
+     "rs": -0.5,
+     "ret3m": -8.1,
+     "above50": false
+    }
+   ],
+   "tail": [
+    [
+     100.91,
+     102.37
+    ],
+    [
+     101.09,
+     101.13
+    ],
+    [
+     101.11,
+     100.38
+    ],
+    [
+     100.94,
+     100.2
+    ],
+    [
+     100.96,
+     100.04
+    ],
+    [
+     100.3,
+     99.22
+    ],
+    [
+     100.69,
+     99.58
+    ],
+    [
+     100.54,
+     99.61
+    ]
+   ]
+  },
+  {
+   "name": "Healthcare",
+   "ratio": 100.97,
+   "mom": 98.15,
+   "phase": 2,
+   "prev_phase": 2,
+   "perf3m": 4.0,
+   "trend_up": true,
+   "breadth": 25.0,
+   "top": [
+    {
+     "symbol": "LAURUSLABS",
+     "rs": 35.1,
+     "ret3m": 33.1,
+     "above50": true
+    },
+    {
+     "symbol": "GLAND",
+     "rs": 30.9,
+     "ret3m": 25.8,
+     "above50": true
+    },
+    {
+     "symbol": "DIVISLAB",
+     "rs": 28.3,
+     "ret3m": 30.1,
+     "above50": true
+    },
+    {
+     "symbol": "AUROPHARMA",
+     "rs": 14.7,
+     "ret3m": 10.1,
+     "above50": true
+    },
+    {
+     "symbol": "IPCALAB",
+     "rs": 14.3,
+     "ret3m": 1.5,
+     "above50": false
+    }
+   ],
+   "tail": [
+    [
+     101.66,
+     99.14
+    ],
+    [
+     101.25,
+     99.29
+    ],
+    [
+     102.19,
+     100.82
+    ],
+    [
+     102.88,
+     101.96
+    ],
+    [
+     103.49,
+     101.8
+    ],
+    [
+     103.33,
+     102.05
+    ],
+    [
+     102.13,
+     99.94
+    ],
+    [
+     100.97,
+     98.15
+    ]
+   ]
+  },
+  {
+   "name": "Defence",
+   "ratio": 100.28,
+   "mom": 98.42,
+   "phase": 2,
+   "prev_phase": 2,
+   "perf3m": 5.6,
+   "trend_up": true,
+   "breadth": 50.0,
+   "top": [
+    {
+     "symbol": "SIGMAADV",
+     "rs": 71.2,
+     "ret3m": 71.8,
+     "above50": true
+    },
+    {
+     "symbol": "UNIMECH",
+     "rs": 46.8,
+     "ret3m": 49.0,
+     "above50": true
+    },
+    {
+     "symbol": "DYNAMATECH",
+     "rs": 31.1,
+     "ret3m": 37.8,
+     "above50": true
+    },
+    {
+     "symbol": "AEQUS",
+     "rs": 23.6,
+     "ret3m": 10.3,
+     "above50": true
+    },
+    {
+     "symbol": "CENTUM",
+     "rs": 17.9,
+     "ret3m": 11.3,
+     "above50": true
+    }
+   ],
+   "tail": [
+    [
+     102.27,
+     102.77
+    ],
+    [
+     102.42,
+     101.9
+    ],
+    [
+     103.41,
      101.7
     ],
     [
-     100.85,
-     100.5
+     101.89,
+     99.62
     ],
     [
-     99.93,
-     99.26
+     101.57,
+     99.32
     ],
     [
-     99.6,
-     98.68
+     101.42,
+     99.01
+    ],
+    [
+     100.15,
+     96.85
+    ],
+    [
+     100.28,
+     98.42
+    ]
+   ]
+  },
+  {
+   "name": "PSE",
+   "ratio": 99.66,
+   "mom": 99.16,
+   "phase": 3,
+   "prev_phase": 3,
+   "perf3m": -0.8,
+   "trend_up": false,
+   "breadth": 5.0,
+   "top": [
+    {
+     "symbol": "BHEL",
+     "rs": 14.3,
+     "ret3m": 5.6,
+     "above50": true
+    },
+    {
+     "symbol": "HAL",
+     "rs": 8.9,
+     "ret3m": 7.9,
+     "above50": false
+    },
+    {
+     "symbol": "GAIL",
+     "rs": 3.1,
+     "ret3m": -3.3,
+     "above50": false
+    },
+    {
+     "symbol": "SAIL",
+     "rs": 0.9,
+     "ret3m": 5.2,
+     "above50": false
+    },
+    {
+     "symbol": "OIL",
+     "rs": 0.3,
+     "ret3m": 1.2,
+     "above50": false
+    }
+   ],
+   "tail": [
+    [
+     98.1,
+     100.38
+    ],
+    [
+     98.9,
+     101.4
+    ],
+    [
+     100.23,
+     102.5
+    ],
+    [
+     100.51,
+     102.52
+    ],
+    [
+     100.9,
+     102.86
+    ],
+    [
+     100.83,
+     101.96
+    ],
+    [
+     99.92,
+     99.7
+    ],
+    [
+     99.66,
+     99.16
+    ]
+   ]
+  },
+  {
+   "name": "Energy",
+   "ratio": 99.75,
+   "mom": 99.08,
+   "phase": 3,
+   "prev_phase": 1,
+   "perf3m": -1.8,
+   "trend_up": false,
+   "breadth": 15.0,
+   "top": [
+    {
+     "symbol": "AEGISLOG",
+     "rs": 36.9,
+     "ret3m": 9.8,
+     "above50": true
+    },
+    {
+     "symbol": "TDPOWERSYS",
+     "rs": 32.9,
+     "ret3m": 40.8,
+     "above50": true
+    },
+    {
+     "symbol": "BHEL",
+     "rs": 14.3,
+     "ret3m": 5.6,
+     "above50": true
+    },
+    {
+     "symbol": "CASTROLIND",
+     "rs": 11.0,
+     "ret3m": 9.0,
+     "above50": true
+    },
+    {
+     "symbol": "PETRONET",
+     "rs": 8.8,
+     "ret3m": 4.3,
+     "above50": true
+    }
+   ],
+   "tail": [
+    [
+     97.72,
+     100.93
+    ],
+    [
+     98.72,
+     102.22
+    ],
+    [
+     100.09,
+     103.15
+    ],
+    [
+     100.68,
+     103.4
+    ],
+    [
+     100.96,
+     103.32
+    ],
+    [
+     101.29,
+     102.6
+    ],
+    [
+     100.39,
+     100.31
+    ],
+    [
+     99.75,
+     99.08
     ]
    ]
   },
   {
    "name": "Consumption",
-   "ratio": 98.85,
-   "mom": 99.01,
+   "ratio": 98.65,
+   "mom": 98.82,
    "phase": 3,
    "prev_phase": 3,
-   "perf3m": 0.6,
+   "perf3m": 0.2,
    "trend_up": false,
-   "breadth": 10.0,
+   "breadth": 7.0,
    "top": [
     {
      "symbol": "ETERNAL",
-     "rs": 20.2,
-     "ret3m": 13.0,
-     "above50": true
+     "rs": 17.8,
+     "ret3m": 9.6,
+     "above50": false
     },
     {
      "symbol": "NAUKRI",
-     "rs": 14.3,
-     "ret3m": 2.9,
+     "rs": 10.9,
+     "ret3m": 1.8,
      "above50": false
     },
     {
      "symbol": "DLF",
-     "rs": 9.8,
-     "ret3m": -2.2,
+     "rs": 8.2,
+     "ret3m": 0.1,
+     "above50": false
+    },
+    {
+     "symbol": "TVSMOTOR",
+     "rs": 8.0,
+     "ret3m": 9.1,
      "above50": false
     },
     {
      "symbol": "INDHOTEL",
-     "rs": 8.8,
-     "ret3m": -2.4,
+     "rs": 6.3,
+     "ret3m": -4.3,
      "above50": false
-    },
-    {
-     "symbol": "TRENT",
-     "rs": 7.9,
-     "ret3m": 1.7,
-     "above50": true
     }
    ],
    "tail": [
@@ -1137,49 +1061,49 @@
      99.05
     ],
     [
-     98.85,
-     99.01
+     98.65,
+     98.82
     ]
    ]
   },
   {
    "name": "Infra",
-   "ratio": 99.03,
-   "mom": 98.83,
+   "ratio": 98.73,
+   "mom": 98.54,
    "phase": 3,
    "prev_phase": 3,
-   "perf3m": -1.3,
+   "perf3m": -1.9,
    "trend_up": false,
-   "breadth": 7.0,
+   "breadth": 3.0,
    "top": [
     {
      "symbol": "MOTHERSON",
-     "rs": 10.3,
-     "ret3m": 7.7,
+     "rs": 11.1,
+     "ret3m": 10.5,
      "above50": false
     },
     {
      "symbol": "DLF",
-     "rs": 9.8,
-     "ret3m": -2.2,
+     "rs": 8.2,
+     "ret3m": 0.1,
      "above50": false
     },
     {
      "symbol": "INDHOTEL",
-     "rs": 8.8,
-     "ret3m": -2.4,
+     "rs": 6.3,
+     "ret3m": -4.3,
      "above50": false
     },
     {
      "symbol": "ADANIPORTS",
-     "rs": 7.6,
-     "ret3m": -3.3,
+     "rs": 5.3,
+     "ret3m": -4.1,
      "above50": true
     },
     {
-     "symbol": "INDIGO",
-     "rs": 5.2,
-     "ret3m": -5.4,
+     "symbol": "GAIL",
+     "rs": 3.1,
+     "ret3m": -3.3,
      "above50": false
     }
    ],
@@ -1213,49 +1137,125 @@
      99.47
     ],
     [
-     99.03,
-     98.83
+     98.73,
+     98.54
+    ]
+   ]
+  },
+  {
+   "name": "Oil & Gas",
+   "ratio": 99.11,
+   "mom": 98.2,
+   "phase": 3,
+   "prev_phase": 3,
+   "perf3m": -1.8,
+   "trend_up": false,
+   "breadth": 33.0,
+   "top": [
+    {
+     "symbol": "AEGISLOG",
+     "rs": 36.9,
+     "ret3m": 9.8,
+     "above50": true
+    },
+    {
+     "symbol": "CHENNPETRO",
+     "rs": 27.5,
+     "ret3m": 32.3,
+     "above50": true
+    },
+    {
+     "symbol": "AEGISVOPAK",
+     "rs": 19.0,
+     "ret3m": 1.6,
+     "above50": true
+    },
+    {
+     "symbol": "CASTROLIND",
+     "rs": 11.0,
+     "ret3m": 9.0,
+     "above50": true
+    },
+    {
+     "symbol": "PETRONET",
+     "rs": 8.8,
+     "ret3m": 4.3,
+     "above50": true
+    }
+   ],
+   "tail": [
+    [
+     99.36,
+     100.3
+    ],
+    [
+     100.35,
+     101.25
+    ],
+    [
+     100.68,
+     101.46
+    ],
+    [
+     100.93,
+     101.43
+    ],
+    [
+     101.04,
+     101.7
+    ],
+    [
+     100.85,
+     100.5
+    ],
+    [
+     99.93,
+     99.26
+    ],
+    [
+     99.11,
+     98.2
     ]
    ]
   },
   {
    "name": "Auto",
-   "ratio": 96.4,
-   "mom": 96.41,
+   "ratio": 96.24,
+   "mom": 96.24,
    "phase": 3,
    "prev_phase": 3,
-   "perf3m": 0.7,
+   "perf3m": 0.3,
    "trend_up": false,
    "breadth": 0.0,
    "top": [
     {
      "symbol": "SONACOMS",
      "rs": 20.1,
-     "ret3m": 17.5,
+     "ret3m": 19.2,
      "above50": false
     },
     {
      "symbol": "BOSCHLTD",
-     "rs": 11.2,
-     "ret3m": 5.7,
+     "rs": 11.8,
+     "ret3m": 8.3,
      "above50": false
     },
     {
      "symbol": "MOTHERSON",
-     "rs": 10.3,
-     "ret3m": 7.7,
+     "rs": 11.1,
+     "ret3m": 10.5,
      "above50": false
     },
     {
      "symbol": "TVSMOTOR",
-     "rs": 7.8,
-     "ret3m": 7.2,
+     "rs": 8.0,
+     "ret3m": 9.1,
      "above50": false
     },
     {
      "symbol": "HYUNDAI",
-     "rs": 3.7,
-     "ret3m": -0.1,
+     "rs": 2.0,
+     "ret3m": -2.2,
      "above50": false
     }
    ],
@@ -1289,49 +1289,49 @@
      95.29
     ],
     [
-     96.4,
-     96.41
+     96.24,
+     96.24
     ]
    ]
   },
   {
    "name": "Metal",
-   "ratio": 98.49,
-   "mom": 94.94,
+   "ratio": 98.29,
+   "mom": 94.75,
    "phase": 3,
    "prev_phase": 3,
-   "perf3m": 4.2,
+   "perf3m": 3.8,
    "trend_up": false,
-   "breadth": 0.0,
+   "breadth": 7.0,
    "top": [
     {
      "symbol": "APLAPOLLO",
-     "rs": 14.4,
-     "ret3m": 18.0,
-     "above50": false
+     "rs": 14.8,
+     "ret3m": 19.2,
+     "above50": true
     },
     {
      "symbol": "LLOYDSME",
-     "rs": 6.7,
-     "ret3m": -0.5,
+     "rs": 4.5,
+     "ret3m": -3.1,
      "above50": false
     },
     {
      "symbol": "JSL",
-     "rs": 3.9,
-     "ret3m": -1.4,
+     "rs": 1.9,
+     "ret3m": -2.0,
      "above50": false
     },
     {
      "symbol": "SAIL",
-     "rs": 2.9,
-     "ret3m": 4.4,
+     "rs": 0.9,
+     "ret3m": 5.2,
      "above50": false
     },
     {
      "symbol": "HINDZINC",
-     "rs": 0.2,
-     "ret3m": 3.0,
+     "rs": -0.8,
+     "ret3m": 3.6,
      "above50": false
     }
    ],
@@ -1365,8 +1365,8 @@
      95.99
     ],
     [
-     98.49,
-     94.94
+     98.29,
+     94.75
     ]
    ]
   }
