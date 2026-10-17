@@ -1,6 +1,6 @@
 {
  "asof": "16 Oct 2026",
- "generated": "16 Oct 2026, 11:32 PM IST",
+ "generated": "17 Oct 2026, 01:15 PM IST",
  "sectors": [
   {
    "name": "IT",
@@ -96,27 +96,27 @@
     },
     {
      "symbol": "PVRINOX",
-     "rs": 29.9,
-     "ret3m": 37.5,
+     "rs": 28.2,
+     "ret3m": 35.6,
      "above50": true
     },
     {
      "symbol": "SUNTV",
-     "rs": 26.3,
-     "ret3m": 31.6,
-     "above50": true
-    },
-    {
-     "symbol": "TIPSMUSIC",
-     "rs": 16.3,
-     "ret3m": 5.1,
+     "rs": 24.6,
+     "ret3m": 29.8,
      "above50": true
     },
     {
      "symbol": "MPSLTD",
-     "rs": 14.4,
-     "ret3m": 21.2,
+     "rs": 14.8,
+     "ret3m": 21.6,
      "above50": false
+    },
+    {
+     "symbol": "SAREGAMA",
+     "rs": 11.2,
+     "ret3m": -2.0,
+     "above50": true
     }
    ],
    "tail": [
@@ -260,8 +260,8 @@
     },
     {
      "symbol": "ICICIGI",
-     "rs": 2.3,
-     "ret3m": 3.6,
+     "rs": 3.0,
+     "ret3m": 4.3,
      "above50": true
     },
     {
@@ -318,14 +318,14 @@
    "top": [
     {
      "symbol": "RADICO",
-     "rs": 13.7,
-     "ret3m": 8.5,
+     "rs": 13.1,
+     "ret3m": 7.9,
      "above50": false
     },
     {
      "symbol": "UNITDSPR",
-     "rs": 2.6,
-     "ret3m": -1.1,
+     "rs": 2.7,
+     "ret3m": -1.0,
      "above50": false
     },
     {
@@ -342,8 +342,8 @@
     },
     {
      "symbol": "PATANJALI",
-     "rs": -4.1,
-     "ret3m": 9.0,
+     "rs": -4.6,
+     "ret3m": 8.5,
      "above50": true
     }
    ],
@@ -470,14 +470,14 @@
    "top": [
     {
      "symbol": "LAURUSLABS",
-     "rs": 30.1,
-     "ret3m": 32.2,
+     "rs": 27.5,
+     "ret3m": 29.5,
      "above50": true
     },
     {
      "symbol": "GLAND",
-     "rs": 25.2,
-     "ret3m": 24.7,
+     "rs": 26.2,
+     "ret3m": 25.6,
      "above50": true
     },
     {
@@ -493,9 +493,9 @@
      "above50": true
     },
     {
-     "symbol": "PPLPHARMA",
-     "rs": 8.5,
-     "ret3m": 10.5,
+     "symbol": "SAILIFE",
+     "rs": 8.9,
+     "ret3m": 7.5,
      "above50": false
     }
    ],
@@ -551,15 +551,15 @@
      "above50": true
     },
     {
-     "symbol": "INDIANB",
-     "rs": 4.2,
-     "ret3m": -0.5,
-     "above50": false
-    },
-    {
      "symbol": "UNIONBANK",
      "rs": 2.8,
      "ret3m": -2.4,
+     "above50": false
+    },
+    {
+     "symbol": "INDIANB",
+     "rs": 1.9,
+     "ret3m": -2.7,
      "above50": false
     },
     {
@@ -647,7 +647,7 @@
     {
      "symbol": "OIL",
      "rs": -0.8,
-     "ret3m": -1.7,
+     "ret3m": -1.6,
      "above50": false
     }
    ],
@@ -709,21 +709,21 @@
      "above50": false
     },
     {
-     "symbol": "CASTROLIND",
-     "rs": 10.7,
-     "ret3m": 10.9,
-     "above50": true
-    },
-    {
      "symbol": "BHEL",
      "rs": 9.8,
      "ret3m": 4.1,
      "above50": true
     },
     {
+     "symbol": "CASTROLIND",
+     "rs": 9.8,
+     "ret3m": 10.0,
+     "above50": true
+    },
+    {
      "symbol": "PETRONET",
-     "rs": 7.4,
-     "ret3m": 6.5,
+     "rs": 8.2,
+     "ret3m": 7.3,
      "above50": true
     }
    ],
@@ -770,7 +770,7 @@
    "prev_phase": 3,
    "perf3m": -5.2,
    "trend_up": true,
-   "breadth": 10.0,
+   "breadth": 20.0,
    "top": [
     {
      "symbol": "DLF",
@@ -780,26 +780,26 @@
     },
     {
      "symbol": "BRIGADE",
-     "rs": 4.2,
-     "ret3m": 2.4,
+     "rs": 5.3,
+     "ret3m": 3.5,
      "above50": false
     },
     {
      "symbol": "PHOENIXLTD",
-     "rs": 3.3,
-     "ret3m": -8.4,
-     "above50": false
+     "rs": 4.4,
+     "ret3m": -7.4,
+     "above50": true
     },
     {
      "symbol": "LODHA",
-     "rs": 2.4,
-     "ret3m": -10.6,
+     "rs": 2.7,
+     "ret3m": -10.3,
      "above50": false
     },
     {
      "symbol": "PRESTIGE",
-     "rs": 1.5,
-     "ret3m": -10.5,
+     "rs": 1.4,
+     "ret3m": -10.6,
      "above50": false
     }
    ],
@@ -862,20 +862,20 @@
     },
     {
      "symbol": "AEGISVOPAK",
-     "rs": 11.5,
-     "ret3m": -1.8,
+     "rs": 13.9,
+     "ret3m": 0.3,
      "above50": false
     },
     {
      "symbol": "CASTROLIND",
-     "rs": 10.7,
-     "ret3m": 10.9,
+     "rs": 9.8,
+     "ret3m": 10.0,
      "above50": true
     },
     {
      "symbol": "PETRONET",
-     "rs": 7.4,
-     "ret3m": 6.5,
+     "rs": 8.2,
+     "ret3m": 7.3,
      "above50": true
     }
    ],
@@ -950,8 +950,8 @@
     },
     {
      "symbol": "ADANIPORTS",
-     "rs": 2.7,
-     "ret3m": -5.1,
+     "rs": 2.3,
+     "ret3m": -5.5,
      "above50": true
     }
    ],
@@ -1007,16 +1007,16 @@
      "above50": true
     },
     {
-     "symbol": "NAUKRI",
-     "rs": 13.7,
-     "ret3m": 6.5,
-     "above50": false
-    },
-    {
      "symbol": "INDHOTEL",
      "rs": 12.7,
      "ret3m": 6.5,
      "above50": true
+    },
+    {
+     "symbol": "NAUKRI",
+     "rs": 11.1,
+     "ret3m": 4.0,
+     "above50": false
     },
     {
      "symbol": "TVSMOTOR",
@@ -1084,8 +1084,8 @@
     },
     {
      "symbol": "UNIMECH",
-     "rs": 41.2,
-     "ret3m": 40.5,
+     "rs": 38.6,
+     "ret3m": 37.9,
      "above50": true
     },
     {
@@ -1095,15 +1095,15 @@
      "above50": true
     },
     {
-     "symbol": "AXISCADES",
-     "rs": 19.7,
-     "ret3m": 33.6,
-     "above50": true
-    },
-    {
      "symbol": "AEQUS",
      "rs": 18.2,
      "ret3m": 9.1,
+     "above50": true
+    },
+    {
+     "symbol": "APOLLO",
+     "rs": 14.7,
+     "ret3m": 9.3,
      "above50": true
     }
    ],
@@ -1154,14 +1154,14 @@
    "top": [
     {
      "symbol": "LAURUSLABS",
-     "rs": 30.1,
-     "ret3m": 32.2,
+     "rs": 27.5,
+     "ret3m": 29.5,
      "above50": true
     },
     {
      "symbol": "GLAND",
-     "rs": 25.2,
-     "ret3m": 24.7,
+     "rs": 26.2,
+     "ret3m": 25.6,
      "above50": true
     },
     {
@@ -1254,8 +1254,8 @@
     },
     {
      "symbol": "HEROMOTOCO",
-     "rs": 4.6,
-     "ret3m": 6.5,
+     "rs": 4.3,
+     "ret3m": 6.2,
      "above50": false
     }
    ],
@@ -1302,13 +1302,13 @@
    "prev_phase": 3,
    "perf3m": 2.4,
    "trend_up": false,
-   "breadth": 13.0,
+   "breadth": 0.0,
    "top": [
     {
      "symbol": "APLAPOLLO",
-     "rs": 12.1,
-     "ret3m": 19.1,
-     "above50": true
+     "rs": 11.4,
+     "ret3m": 18.4,
+     "above50": false
     },
     {
      "symbol": "LLOYDSME",
@@ -1318,9 +1318,9 @@
     },
     {
      "symbol": "JSL",
-     "rs": 4.3,
-     "ret3m": 1.2,
-     "above50": true
+     "rs": 2.6,
+     "ret3m": -0.4,
+     "above50": false
     },
     {
      "symbol": "SAIL",
