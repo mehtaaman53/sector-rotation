@@ -1,6 +1,6 @@
 {
  "asof": "23 Oct 2026",
- "generated": "23 Oct 2026, 11:48 PM IST",
+ "generated": "24 Oct 2026, 01:35 PM IST",
  "sectors": [
   {
    "name": "IT",
@@ -86,12 +86,12 @@
    "prev_phase": 1,
    "perf3m": 7.3,
    "trend_up": true,
-   "breadth": 40.0,
+   "breadth": 50.0,
    "top": [
     {
      "symbol": "PVRINOX",
-     "rs": 30.6,
-     "ret3m": 31.2,
+     "rs": 32.9,
+     "ret3m": 33.5,
      "above50": true
     },
     {
@@ -102,21 +102,21 @@
     },
     {
      "symbol": "SUNTV",
-     "rs": 17.2,
-     "ret3m": 20.1,
+     "rs": 21.6,
+     "ret3m": 24.6,
      "above50": true
     },
     {
      "symbol": "TIPSMUSIC",
-     "rs": 14.4,
-     "ret3m": 3.4,
+     "rs": 15.3,
+     "ret3m": 4.3,
      "above50": true
     },
     {
      "symbol": "SAREGAMA",
-     "rs": 8.6,
-     "ret3m": -1.9,
-     "above50": false
+     "rs": 13.4,
+     "ret3m": 2.5,
+     "above50": true
     }
    ],
    "tail": [
@@ -242,8 +242,8 @@
    "top": [
     {
      "symbol": "PNB",
-     "rs": 14.4,
-     "ret3m": 9.1,
+     "rs": 16.4,
+     "ret3m": 11.0,
      "above50": true
     },
     {
@@ -330,8 +330,8 @@
     },
     {
      "symbol": "GLAND",
-     "rs": 17.2,
-     "ret3m": 19.7,
+     "rs": 18.1,
+     "ret3m": 20.7,
      "above50": false
     },
     {
@@ -405,16 +405,16 @@
      "above50": true
     },
     {
+     "symbol": "ICICIGI",
+     "rs": 2.0,
+     "ret3m": -1.7,
+     "above50": true
+    },
+    {
      "symbol": "AXISBANK",
      "rs": 0.5,
      "ret3m": -0.8,
      "above50": false
-    },
-    {
-     "symbol": "ICICIGI",
-     "rs": -0.1,
-     "ret3m": -3.8,
-     "above50": true
     },
     {
      "symbol": "SBIN",
@@ -470,8 +470,8 @@
    "top": [
     {
      "symbol": "PNB",
-     "rs": 14.4,
-     "ret3m": 9.1,
+     "rs": 16.4,
+     "ret3m": 11.0,
      "above50": true
     },
     {
@@ -552,8 +552,8 @@
     },
     {
      "symbol": "MARICO",
-     "rs": -2.2,
-     "ret3m": -10.0,
+     "rs": -1.1,
+     "ret3m": -9.0,
      "above50": false
     },
     {
@@ -622,7 +622,7 @@
    "top": [
     {
      "symbol": "INDHOTEL",
-     "rs": 16.0,
+     "rs": 16.1,
      "ret3m": 7.5,
      "above50": true
     },
@@ -721,9 +721,9 @@
      "above50": false
     },
     {
-     "symbol": "OIL",
-     "rs": 2.1,
-     "ret3m": -0.2,
+     "symbol": "AEGISVOPAK",
+     "rs": 3.9,
+     "ret3m": -13.4,
      "above50": false
     }
    ],
@@ -774,7 +774,7 @@
    "top": [
     {
      "symbol": "INDHOTEL",
-     "rs": 16.0,
+     "rs": 16.1,
      "ret3m": 7.5,
      "above50": true
     },
@@ -1014,8 +1014,8 @@
     },
     {
      "symbol": "GLAND",
-     "rs": 17.2,
-     "ret3m": 19.7,
+     "rs": 18.1,
+     "ret3m": 20.7,
      "above50": false
     },
     {
@@ -1026,8 +1026,8 @@
     },
     {
      "symbol": "ZYDUSLIFE",
-     "rs": 7.8,
-     "ret3m": 1.9,
+     "rs": 8.3,
+     "ret3m": 2.4,
      "above50": false
     }
    ],
@@ -1085,7 +1085,7 @@
     {
      "symbol": "BOSCHLTD",
      "rs": 9.6,
-     "ret3m": 6.3,
+     "ret3m": 6.2,
      "above50": false
     },
     {
@@ -1102,8 +1102,8 @@
     },
     {
      "symbol": "HEROMOTOCO",
-     "rs": 3.2,
-     "ret3m": 0.7,
+     "rs": 4.8,
+     "ret3m": 2.3,
      "above50": false
     }
    ],
@@ -1166,14 +1166,14 @@
     },
     {
      "symbol": "BRIGADE",
-     "rs": 1.5,
-     "ret3m": 4.6,
+     "rs": 3.2,
+     "ret3m": 6.4,
      "above50": false
     },
     {
      "symbol": "PRESTIGE",
-     "rs": -3.3,
-     "ret3m": -12.5,
+     "rs": -0.7,
+     "ret3m": -10.1,
      "above50": false
     },
     {
@@ -1230,8 +1230,8 @@
    "top": [
     {
      "symbol": "SIGMAADV",
-     "rs": 30.7,
-     "ret3m": 49.4,
+     "rs": 37.5,
+     "ret3m": 57.2,
      "above50": false
     },
     {
@@ -1241,21 +1241,21 @@
      "above50": false
     },
     {
+     "symbol": "AXISCADES",
+     "rs": 13.2,
+     "ret3m": 22.0,
+     "above50": true
+    },
+    {
      "symbol": "DYNAMATECH",
      "rs": 12.8,
      "ret3m": 17.7,
      "above50": false
     },
     {
-     "symbol": "AXISCADES",
-     "rs": 10.7,
-     "ret3m": 19.2,
-     "above50": true
-    },
-    {
      "symbol": "CENTUM",
-     "rs": 9.5,
-     "ret3m": 6.6,
+     "rs": 12.2,
+     "ret3m": 9.3,
      "above50": false
     }
    ],
@@ -1306,20 +1306,20 @@
    "top": [
     {
      "symbol": "APLAPOLLO",
-     "rs": 8.3,
-     "ret3m": 12.0,
+     "rs": 9.3,
+     "ret3m": 13.0,
      "above50": false
     },
     {
      "symbol": "LLOYDSME",
-     "rs": 2.5,
-     "ret3m": -8.2,
+     "rs": 3.9,
+     "ret3m": -6.9,
      "above50": false
     },
     {
      "symbol": "JSL",
-     "rs": -0.2,
-     "ret3m": -3.4,
+     "rs": 3.0,
+     "ret3m": -0.2,
      "above50": false
     },
     {
