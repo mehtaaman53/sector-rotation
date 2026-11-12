@@ -39,8 +39,8 @@
   "Consumption": 30,
   "Defence": 22
  },
- "nse_days": 760,
- "nse_last": "2026-11-11",
+ "nse_days": 761,
+ "nse_last": "2026-11-12",
  "benchmark": "NSE: Nifty 50",
  "rrg_indices": 48,
  "sectors_ok": 18
