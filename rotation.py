@@ -1,572 +1,433 @@
 """
-THE TRADE TRIBE — Sector Rotation Engine
-Har hafte GitHub Actions pe automatic chalta hai:
-  1. NSE sector indices ka data (Yahoo Finance) laata hai
-  2. RRG (RS-Ratio / RS-Momentum) nikalta hai — TradingView indicator wala hi formula
-  3. Sector breadth (% stocks 50 DMA ke upar) + top RS stocks nikalta hai
-  4. docs/index.html dashboard banata hai (GitHub Pages pe live)
-  5. Telegram pe alert bhejta hai
-Aapko isme kuch chhedna nahi hai. Sectors badalne ho to SECTORS list edit karo.
+THE TRADE TRIBE — Sector Rotation Engine (v2: Sector → Industry → Theme)
+
+Groups: data/groups.csv (scanthecharts se liya, saaf kiya hua — 1,815 stocks, mcap ₹400 cr+).
+Har group EQUAL-WEIGHT hai (koi heavyweight nahi).
+
+Har run pe:
+  1. Saare stocks ka 3 saal ka daily price (Yahoo) + NSE official benchmarks
+  2. Har sector / industry / theme ka equal-weight index
+  3. Returns (1D…YTD), rank + rank change, breadth, 20D highs/lows
+  4. RRG — WEEKLY aur MONTHLY (group vs Nifty 500)
+  5. Har stock: return, 52W high se doori, RS (apne benchmark ke against)
+  6. docs/index.html dashboard (scanthecharts jaisa) + Telegram alert
+
+Benchmarks:
+  Group → NIFTY 500
+  Stock → Large (rank 1–100) NIFTY 50 | Mid (101–250) MIDCAP 150 | Small + Micro → SMALLCAP 250
+
+Test: python rotation.py --demo   (bina internet, nakli data)
 """
-import json, os, sys, datetime as dt
+import json, os, sys, time, datetime as dt
 import numpy as np
 import pandas as pd
 
-BENCH = "^NSEI"
-# naam, Yahoo ticker, niftyindices constituents file
-SECTORS = [  # naam, Yahoo tickers ("|" = pehla na mile to agla try), constituents file
-    ("IT",           "^CNXIT|NIFTY_IT.NS",                     "ind_niftyitlist.csv"),
-    ("Bank",         "^NSEBANK|NIFTY_BANK.NS",                 "ind_niftybanklist.csv"),
-    ("Pvt Bank",     "NIFTY_PVT_BANK.NS|^NIFTYPVTBANK",        "ind_nifty_privatebanklist.csv"),
-    ("PSU Bank",     "^CNXPSUBANK|NIFTY_PSU_BANK.NS",          "ind_niftypsubanklist.csv"),
-    ("Fin Services", "NIFTY_FIN_SERVICE.NS|^CNXFIN",           "ind_niftyfinancelist.csv"),
-    ("Auto",         "^CNXAUTO|NIFTY_AUTO.NS",                 "ind_niftyautolist.csv"),
-    ("Pharma",       "^CNXPHARMA|NIFTY_PHARMA.NS",             "ind_niftypharmalist.csv"),
-    ("Healthcare",   "NIFTY_HEALTHCARE.NS|^CNXHEALTH",         "ind_niftyhealthcarelist.csv"),
-    ("FMCG",         "^CNXFMCG|NIFTY_FMCG.NS",                 "ind_niftyfmcglist.csv"),
-    ("Metal",        "^CNXMETAL|NIFTY_METAL.NS",               "ind_niftymetallist.csv"),
-    ("Realty",       "^CNXREALTY|NIFTY_REALTY.NS",             "ind_niftyrealtylist.csv"),
-    ("Energy",       "^CNXENERGY|NIFTY_ENERGY.NS",             "ind_niftyenergylist.csv"),
-    ("Oil & Gas",    "NIFTY_OIL_AND_GAS.NS|^CNXOILGAS",        "ind_niftyoilgaslist.csv"),
-    ("Infra",        "^CNXINFRA|NIFTY_INFRA.NS",               "ind_niftyinfralist.csv"),
-    ("PSE",          "^CNXPSE|NIFTY_PSE.NS",                   "ind_niftypselist.csv"),
-    ("Media",        "^CNXMEDIA|NIFTY_MEDIA.NS",               "ind_niftymedialist.csv"),
-    ("Consumption",  "^CNXCONSUM|NIFTY_CONSUMPTION.NS",        "ind_niftyconsumptionlist.csv"),
-    ("Defence",      "NIFTY_IND_DEFENCE.NS|^CNXDEFENCE",       "ind_niftyindiadefence_list.csv"),
-]
-# NSE archive mein index ke naam (pehla jo mile)
-NSE_NAMES = {
-    "IT": ["Nifty IT"], "Bank": ["Nifty Bank"], "Pvt Bank": ["Nifty Private Bank"],
-    "PSU Bank": ["Nifty PSU Bank"], "Fin Services": ["Nifty Financial Services"],
-    "Auto": ["Nifty Auto"], "Pharma": ["Nifty Pharma"],
-    "Healthcare": ["Nifty Healthcare Index", "Nifty Healthcare"], "FMCG": ["Nifty FMCG"],
-    "Metal": ["Nifty Metal"], "Realty": ["Nifty Realty"], "Energy": ["Nifty Energy"],
-    "Oil & Gas": ["Nifty Oil & Gas", "Nifty Oil and Gas"], "Infra": ["Nifty Infrastructure", "Nifty Infra"],
-    "PSE": ["Nifty PSE"], "Media": ["Nifty Media"],
-    "Consumption": ["Nifty India Consumption", "Nifty Consumption"],
-    "Defence": ["Nifty India Defence", "Nifty Defence"],
+ROOT = os.path.dirname(os.path.abspath(__file__))
+OUT = os.path.join(ROOT, "docs")
+GROUPS_CSV = os.path.join(ROOT, "data", "groups.csv")
+
+BENCH_NAMES = {  # NSE archive naam → apna naam
+    "NIFTY 50": ["Nifty 50"],
+    "NIFTY 500": ["Nifty 500"],
+    "NIFTY MIDCAP 150": ["Nifty Midcap 150"],
+    "NIFTY SMALLCAP 250": ["Nifty Smallcap 250"],
 }
-RS_LEN, MOM_LEN, SMOOTH, TREND_LEN, PERF_LEN, TAIL = 10, 4, 3, 40, 13, 8
-PHASE = {1: "LEADING", 2: "WEAKENING", 3: "LAGGING", 4: "IMPROVING", 0: "NO DATA"}
-EMOJI = {1: "🟢", 2: "🟡", 3: "🔴", 4: "🔵", 0: "⚪"}
-OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "docs")
+BENCH_YAHOO = {"NIFTY 50": "^NSEI", "NIFTY 500": "^CRSLDX",
+               "NIFTY MIDCAP 150": "NIFTYMIDCAP150.NS", "NIFTY SMALLCAP 250": "NIFTYSMLCAP250.NS"}
+GROUP_BENCH = "NIFTY 500"
+
+# timeframe → kitne trading din
+TF = {"1D": 1, "1W": 5, "1M": 21, "3M": 63, "6M": 126, "1Y": 252}
+# RRG: (smoothing, RS-Ratio length, Momentum lookback, kitne points rakhne)
+RRG_P = {"weekly": (3, 10, 4, 52), "monthly": (2, 6, 3, 24)}
+SMALL_GROUP = 3          # isse kam/barabar stocks = "small group" (default chhupa, toggle se dikhe)
+MAX_DAILY_MOVE = 0.40    # ek din mein 40%+ move = data galti maan ke clip
 
 
-# ── Data ─────────────────────────────────────────────────────────────
-def _close(df, tickers):
-    if df is None or df.empty:
-        return pd.DataFrame()
-    if isinstance(df.columns, pd.MultiIndex):
-        return df["Close"]
-    return df[["Close"]].rename(columns={"Close": tickers[0]})
+# ── Data ─────────────────────────────────────────────────────────────────
+def load_groups():
+    g = pd.read_csv(GROUPS_CSV)
+    g["themes"] = g["themes"].fillna("")
+    return g
 
 
-def fetch_prices(tickers, period="3y", chunk=60):
-    """Stocks ko chhote batches mein laata hai (Yahoo zyada ek saath mein atakta hai)."""
-    import yfinance as yf, time
-    parts = []
-    for i in range(0, len(tickers), chunk):
-        part = tickers[i:i + chunk]
-        for attempt in range(2):
+def yahoo_ticker(sym):
+    return sym + ".NS"
+
+
+def fetch_prices(syms, period="3y", chunk=60):
+    """Stocks ko batches mein Yahoo se laao. Return: close & volume (date x symbol)."""
+    import yfinance as yf
+    closes, vols = [], []
+    for i in range(0, len(syms), chunk):
+        part = syms[i:i + chunk]
+        tick = [yahoo_ticker(s) for s in part]
+        for attempt in range(3):
             try:
-                df = yf.download(part, period=period, interval="1d", auto_adjust=True,
+                df = yf.download(tick, period=period, interval="1d", auto_adjust=True,
                                  progress=False, group_by="column", threads=True)
-                parts.append(_close(df, part))
+                if df is None or df.empty:
+                    raise ValueError("empty")
+                c = df["Close"] if isinstance(df.columns, pd.MultiIndex) else df[["Close"]].set_axis(tick, axis=1)
+                v = df["Volume"] if isinstance(df.columns, pd.MultiIndex) else df[["Volume"]].set_axis(tick, axis=1)
+                closes.append(c); vols.append(v)
                 break
             except Exception as e:
-                print(f"  batch fail ({e}), retry")
-                time.sleep(5)
-        time.sleep(2)
-    out = pd.concat(parts, axis=1) if parts else pd.DataFrame()
-    return out.loc[:, ~out.columns.duplicated()].dropna(how="all")
+                print(f"  batch {i // chunk + 1} fail ({e}), retry {attempt + 1}")
+                time.sleep(5 * (attempt + 1))
+        time.sleep(1.5)
+        print(f"  prices: {min(i + chunk, len(syms))}/{len(syms)}")
+    close = pd.concat(closes, axis=1) if closes else pd.DataFrame()
+    vol = pd.concat(vols, axis=1) if vols else pd.DataFrame()
+    for d in (close, vol):
+        d.columns = [c.replace(".NS", "") for c in d.columns]
+        d.index = pd.to_datetime(d.index).tz_localize(None).normalize()
+    close = close.loc[:, ~close.columns.duplicated()]
+    vol = vol.loc[:, ~vol.columns.duplicated()]
+    return close.sort_index(), vol.sort_index()
 
 
-def fetch_index(cands, period="3y"):
-    """Har candidate ticker try karo; jiska 1 saal+ data mile wahi lo."""
-    import yfinance as yf, time
-    for t in cands.split("|"):
-        try:
-            h = yf.Ticker(t).history(period=period, interval="1d", auto_adjust=True)
-            c = h["Close"].dropna()
-            if len(c) >= 260:
-                c.index = c.index.tz_localize(None).normalize()
-                return t, c
-        except Exception as e:
-            print(f"  {t}: {e}")
-        time.sleep(1)
-    return None, None
-
-
-def synthetic_index(px):
-    """Index ka data na mile to sector ke stocks ka equal-weight index bana lo."""
-    rets = px.ffill().pct_change(fill_method=None)
-    rets = rets.loc[:, px.notna().sum() >= 260]
-    if rets.shape[1] < 3:
-        return None
-    return 1000 * (1 + rets.mean(axis=1).fillna(0)).cumprod()
-
-
-def fetch_constituents(fname):
-    import requests, io
-    url = f"https://niftyindices.com/IndexConstituent/{fname}"
+def fetch_benchmarks():
+    """Pehle NSE official (data/nse_indices.csv), na mile to Yahoo."""
+    out, src = {}, {}
     try:
-        r = requests.get(url, timeout=20, headers={"User-Agent": "Mozilla/5.0"})
-        r.raise_for_status()
-        c = pd.read_csv(io.StringIO(r.text))
-        return [s.strip() + ".NS" for s in c["Symbol"].dropna()]
+        import nse_data
+        nse = nse_data.update_history()
+        for k, names in BENCH_NAMES.items():
+            col = nse_data.pick(nse, *names)
+            if col is not None and nse[col].notna().sum() > 260:
+                out[k] = nse[col].dropna(); src[k] = "NSE: " + col
     except Exception as e:
-        print(f"  constituents fail {fname}: {e}")
-        return []
+        print("NSE data fail:", e)
+    missing = [k for k in BENCH_NAMES if k not in out]
+    if missing:
+        import yfinance as yf
+        for k in missing:
+            try:
+                h = yf.Ticker(BENCH_YAHOO[k]).history(period="3y", interval="1d", auto_adjust=True)["Close"].dropna()
+                h.index = h.index.tz_localize(None).normalize()
+                if len(h) > 260:
+                    out[k] = h; src[k] = "Yahoo " + BENCH_YAHOO[k]
+            except Exception as e:
+                print(f"  bench {k} fail: {e}")
+    return pd.DataFrame(out).sort_index(), src
 
 
-def demo_data():
-    """Synthetic data — sirf test ke liye (python rotation.py --demo)."""
-    rng = np.random.default_rng(7)
-    idx = pd.bdate_range(end=pd.Timestamp.today().normalize(), periods=750)
-    bench = 20000 * np.exp(np.cumsum(rng.normal(0.0004, 0.01, len(idx))))
-    data = {BENCH: bench}
-    cons = {}
-    for k, (name, tk, _) in enumerate(SECTORS):
-        drift = np.sin(np.linspace(0, 3 + k * 0.4, len(idx)) + k) * 0.0012
-        tk = "SEC::" + name
-        data[tk] = bench * np.exp(np.cumsum(drift + rng.normal(0, 0.006, len(idx))))
-        cons[name] = []
-        for j in range(6):
-            sym = f"{name[:4].upper().replace(' ', '')}{j}.NS"
-            data[sym] = data[tk] * np.exp(np.cumsum(rng.normal(0.0002 * (j - 2), 0.012, len(idx))))
-            cons[name].append(sym)
-    return pd.DataFrame(data, index=idx), cons
+def demo_data(groups):
+    """Nakli data — sirf test ke liye."""
+    rng = np.random.default_rng(11)
+    idx = pd.bdate_range(end=pd.Timestamp("2026-11-13"), periods=760)
+    n = len(idx)
+    mkt = np.cumsum(rng.normal(0.0004, 0.009, n))
+    bench = pd.DataFrame({"NIFTY 500": 20000 * np.exp(mkt)}, index=idx)
+    bench["NIFTY 50"] = 24000 * np.exp(mkt * 0.9 + np.cumsum(rng.normal(0, 0.002, n)))
+    bench["NIFTY MIDCAP 150"] = 18000 * np.exp(mkt * 1.2 + np.cumsum(rng.normal(0, 0.003, n)))
+    bench["NIFTY SMALLCAP 250"] = 15000 * np.exp(mkt * 1.4 + np.cumsum(rng.normal(0, 0.004, n)))
+    themes = sorted({t for s in groups["themes"] for t in s.split("|") if t})
+    inds = sorted(groups["industry"].unique())
+    drift = {}
+    for k, name in enumerate(inds + themes):
+        ph = rng.uniform(0, 6.28); sp = rng.uniform(1.5, 5)
+        drift[name] = np.sin(np.linspace(0, sp, n) + ph) * rng.uniform(0.0004, 0.0018)
+    close, vol = {}, {}
+    for _, r in groups.iterrows():
+        d = drift[r["industry"]].copy()
+        for t in [t for t in r["themes"].split("|") if t]:
+            d += drift[t] * 0.6
+        ret = mkt[1:] - mkt[:-1]
+        steps = np.r_[0, ret] * rng.uniform(0.7, 1.4) + d + rng.normal(0, 0.017, n)
+        start = int(rng.integers(0, 120)) if rng.random() < 0.08 else 0
+        p = 100 * np.exp(np.cumsum(steps))
+        p[:start] = np.nan
+        close[r["symbol"]] = p
+        vol[r["symbol"]] = rng.lognormal(11, 1, n) * (1 + (rng.random(n) < 0.03) * 2)
+    return pd.DataFrame(close, index=idx), pd.DataFrame(vol, index=idx), bench
 
 
-# ── Calculations (TradingView indicator jaisa hi) ──────────────────────
+# ── Calculations ─────────────────────────────────────────────────────────
+def clean_returns(close):
+    r = close.pct_change(fill_method=None)
+    return r.where(r.abs() <= MAX_DAILY_MOVE)
+
+
+def ew_index(rets, members):
+    """Equal-weight index: har din members ke return ka average."""
+    cols = [m for m in members if m in rets.columns]
+    if not cols:
+        return None
+    r = rets[cols].mean(axis=1, skipna=True)
+    cnt = rets[cols].notna().sum(axis=1)
+    r = r.where(cnt > 0, 0.0).fillna(0.0)
+    return 100 * (1 + r).cumprod()
+
+
+def ret_over(s, n):
+    s = s.dropna()
+    if len(s) <= n:
+        return None
+    return float(s.iloc[-1] / s.iloc[-1 - n] - 1)
+
+
+def ytd_ret(s):
+    s = s.dropna()
+    if s.empty:
+        return None
+    prev = s[s.index < pd.Timestamp(s.index[-1].year, 1, 1)]
+    if prev.empty:
+        return None
+    return float(s.iloc[-1] / prev.iloc[-1] - 1)
+
+
 def quad(r, m):
-    if pd.isna(r) or pd.isna(m):
+    if r is None or m is None or np.isnan(r) or np.isnan(m):
         return 0
     return (1 if m >= 100 else 2) if r >= 100 else (4 if m >= 100 else 3)
 
 
-def rrg(sec_w, bench_w):
-    rs = 100 * sec_w / bench_w
-    rs_s = rs.ewm(span=SMOOTH, adjust=False).mean()
-    ratio = 100 * rs_s / rs_s.rolling(RS_LEN).mean()
-    mom = 100 * ratio / ratio.shift(MOM_LEN)
+def rrg_series(idx_s, bench_s, tf):
+    sm, rl, ml, keep = RRG_P[tf]
+    df = pd.concat([idx_s, bench_s], axis=1, keys=["g", "b"]).dropna()
+    rule = "W-FRI" if tf == "weekly" else "ME"
+    df = df.resample(rule).last().dropna()
+    rs = 100 * df["g"] / df["b"]
+    rs_s = rs.ewm(span=sm, adjust=False).mean()
+    ratio = 100 * rs_s / rs_s.rolling(rl).mean()
+    mom = 100 * ratio / ratio.shift(ml)
+    ok = ratio.notna() & mom.notna()
+    ratio, mom = ratio[ok].iloc[-keep:], mom[ok].iloc[-keep:]
     return ratio, mom
 
 
-def analyse(daily, cons_map):
-    weekly = daily.resample("W-FRI").last()
-    bw = weekly[BENCH]
-    sectors = []
-    for name, _, _ in SECTORS:
-        tk = "SEC::" + name
-        if tk not in weekly or weekly[tk].dropna().size < RS_LEN + MOM_LEN + 5:
-            print(f"  skip {name} ({tk}) — data nahi mila")
-            continue
-        sw = weekly[tk]
-        ratio, mom = rrg(sw, bw)
-        valid = ratio.notna() & mom.notna()
-        r, m = ratio[valid], mom[valid]
-        q_now, q_prev = quad(r.iloc[-1], m.iloc[-1]), quad(r.iloc[-2], m.iloc[-2])
-        perf = (sw.iloc[-1] / sw.iloc[-1 - PERF_LEN] - bw.iloc[-1] / bw.iloc[-1 - PERF_LEN]) * 100
-        trend_up = bool(sw.iloc[-1] > sw.rolling(TREND_LEN).mean().iloc[-1])
+def r2(x, k=2):
+    return None if x is None or (isinstance(x, float) and np.isnan(x)) else round(float(x), k)
 
-        # Breadth + top stocks
-        syms = [s for s in cons_map.get(name, []) if s in daily]
-        breadth, top = None, []
-        if syms:
-            px = daily[syms].ffill()
-            above = (px.iloc[-1] > px.rolling(50).mean().iloc[-1])
-            breadth = round(100 * above.mean(), 0)
-            bd = daily[BENCH].ffill()
-            rows = []
-            for s in syms:
-                p = px[s].dropna()
-                if len(p) < 130:
-                    continue
-                rr = p / bd.reindex(p.index)
-                mrs = (rr.iloc[-1] / rr.rolling(125).mean().iloc[-1] - 1) * 100
-                ret3m = (p.iloc[-1] / p.iloc[-63] - 1) * 100
-                rows.append({"symbol": s.replace(".NS", ""), "rs": round(float(mrs), 1),
-                             "ret3m": round(float(ret3m), 1),
-                             "above50": bool(p.iloc[-1] > p.rolling(50).mean().iloc[-1])})
-            top = sorted(rows, key=lambda x: -x["rs"])[:5]
 
-        sectors.append({
-            "name": name, "ratio": round(float(r.iloc[-1]), 2), "mom": round(float(m.iloc[-1]), 2),
-            "phase": q_now, "prev_phase": q_prev, "perf3m": round(float(perf), 1),
-            "trend_up": trend_up, "breadth": breadth, "top": top,
-            "tail": [[round(float(a), 2), round(float(b), 2)] for a, b in zip(r.iloc[-TAIL:], m.iloc[-TAIL:])],
+def pct(x):
+    return None if x is None else round(100 * x, 2)
+
+
+def analyse(groups, close, vol, bench):
+    close = close.loc[close.index >= bench.index.min()].copy()
+    close = close.reindex(close.index.union(bench.index)).sort_index()
+    close = close.loc[close.index <= bench.index.max()]
+    close = close.ffill(limit=5)
+    rets = clean_returns(close)
+    last_day = bench[GROUP_BENCH].dropna().index[-1]
+    close, rets = close.loc[:last_day], rets.loc[:last_day]
+    bench = bench.ffill().loc[:last_day]
+
+    have = [s for s in groups["symbol"] if s in close.columns and close[s].notna().sum() > 30]
+    g = groups[groups["symbol"].isin(have)].copy()
+    print(f"Price mila: {len(have)} / {len(groups)} stocks")
+
+    # ── stock level
+    px = close[have]
+    sma20, sma50, sma200 = px.rolling(20).mean(), px.rolling(50).mean(), px.rolling(200).mean()
+    hi252 = px.rolling(252, min_periods=60).max()
+    hi20 = px.rolling(20).max(); lo20 = px.rolling(20).min()
+    lastp = px.iloc[-1]
+    stock_ret = {}
+    for k, n in TF.items():
+        stock_ret[k] = (px.iloc[-1] / px.shift(n).iloc[-1] - 1)
+    ytd_base = px[px.index < pd.Timestamp(last_day.year, 1, 1)].iloc[-1] if (px.index < pd.Timestamp(last_day.year, 1, 1)).any() else None
+    stock_ret["YTD"] = (px.iloc[-1] / ytd_base - 1) if ytd_base is not None else pd.Series(np.nan, index=px.columns)
+    # RS: 3M + 6M return apne benchmark ke against → percentile 1–99
+    rel = {}
+    for _, r in g.iterrows():
+        b = bench[r["benchmark"]] if r["benchmark"] in bench else bench[GROUP_BENCH]
+        p = px[r["symbol"]]
+        parts = []
+        for n, w in ((63, 0.4), (126, 0.4), (21, 0.2)):
+            a, bb = ret_over(p, n), ret_over(b, n)
+            if a is not None and bb is not None:
+                parts.append(w * (a - bb))
+        rel[r["symbol"]] = sum(parts) if parts else np.nan
+    rel = pd.Series(rel)
+    rs_rating = (rel.rank(pct=True) * 98 + 1).round()
+    is20h = (px.iloc[-1] >= hi20.iloc[-1] * 0.9999)
+    is20l = (px.iloc[-1] <= lo20.iloc[-1] * 1.0001)
+    above = {k: (px.iloc[-1] > s.iloc[-1]) for k, s in (("20", sma20), ("50", sma50), ("200", sma200))}
+    from_hi = (px.iloc[-1] / hi252.iloc[-1] - 1)
+    vratio = None
+    if vol is not None and not vol.empty:
+        vv = vol.reindex(columns=have).loc[:last_day]
+        vratio = vv.rolling(5).mean().iloc[-1] / vv.rolling(50).mean().iloc[-1]
+
+    stocks = []
+    for _, r in g.iterrows():
+        s = r["symbol"]
+        stocks.append({
+            "s": s, "sec": r["sector"], "ind": r["industry"],
+            "th": [t for t in r["themes"].split("|") if t],
+            "cap": r["cap_bucket"], "bm": r["benchmark"], "mc": r2(r["mcap_cr"], 0),
+            "liq": r["liquidity_tag"].split(" ")[0], "fno": int(r["fno"]) if not pd.isna(r["fno"]) else 0,
+            "p": r2(lastp[s]), "r": {k: pct(None if pd.isna(v[s]) else v[s]) for k, v in stock_ret.items()},
+            "hi": pct(None if pd.isna(from_hi[s]) else from_hi[s]),
+            "rs": None if pd.isna(rs_rating.get(s)) else int(rs_rating[s]),
+            "h20": bool(is20h[s]), "l20": bool(is20l[s]),
+            "a50": bool(above["50"][s]), "a200": bool(above["200"][s]),
+            "vr": None if vratio is None or pd.isna(vratio.get(s)) else r2(vratio[s], 1),
         })
-    prio = {1: 0, 4: 1, 2: 2, 3: 3, 0: 9}
-    sectors.sort(key=lambda s: (prio[s["phase"]], -((s["ratio"] - 100) + 2 * (s["mom"] - 100))))
-    return {"asof": daily.index[-1].strftime("%d %b %Y"),
-            "generated": dt.datetime.now(dt.timezone(dt.timedelta(hours=5, minutes=30))).strftime("%d %b %Y, %I:%M %p IST"),
-            "sectors": sectors}
+
+    # ── group level
+    def members(kind):
+        m = {}
+        for _, r in g.iterrows():
+            keys = [t for t in r["themes"].split("|") if t] if kind == "theme" else [r[kind]]
+            for k in keys:
+                m.setdefault(k, []).append(r["symbol"])
+        return m
+
+    bench_ret = {k: ret_over(bench[GROUP_BENCH], n) for k, n in TF.items()}
+    bench_ret["YTD"] = ytd_ret(bench[GROUP_BENCH])
+    out_groups = {}
+    for kind in ("sector", "industry", "theme"):
+        rows = []
+        for name, mem in members(kind).items():
+            idx_s = ew_index(rets, mem)
+            if idx_s is None:
+                continue
+            row = {"name": name, "n": len(mem), "m": mem, "small": len(mem) <= SMALL_GROUP}
+            # returns + median member return
+            row["ret"] = {k: pct(ret_over(idx_s, n)) for k, n in TF.items()}
+            row["ret"]["YTD"] = pct(ytd_ret(idx_s))
+            row["med"] = {k: pct(float(np.nanmedian(stock_ret[k][mem].values))) if stock_ret[k][mem].notna().any() else None
+                          for k in list(TF) + ["YTD"]}
+            row["rel"] = {k: None if row["ret"][k] is None or bench_ret[k] is None else round(row["ret"][k] - 100 * bench_ret[k], 2)
+                          for k in row["ret"]}
+            # rank change ke liye 5 din pehle ka return
+            prev_idx = idx_s.iloc[:-5]
+            row["ret_prev"] = {k: pct(ret_over(prev_idx, n)) for k, n in TF.items()}
+            row["ret_prev"]["YTD"] = pct(ytd_ret(prev_idx))
+            # breadth
+            row["b20"] = round(100 * float(above["20"][mem].mean()), 0)
+            row["b50"] = round(100 * float(above["50"][mem].mean()), 0)
+            row["b200"] = round(100 * float(above["200"][mem].mean()), 0)
+            row["nh"] = round(100 * float((from_hi[mem] >= -0.10).mean()), 0)
+            row["h20"] = int(is20h[mem].sum()); row["l20"] = int(is20l[mem].sum())
+            # quality tags
+            n = len(mem)
+            row["size"] = "Single" if n == 1 else "Chhota" if n <= 3 else "Medium" if n <= 9 else "Broad"
+            caps = g.set_index("symbol").loc[mem, "cap_bucket"].value_counts()
+            row["capmix"] = {c: int(caps.get(c, 0)) for c in ("Large", "Mid", "Small", "Micro")}
+            row["micro"] = round(caps.get("Micro", 0) / n, 2)
+            liqs = g.set_index("symbol").loc[mem, "median30_turnover_cr"]
+            row["liq"] = r2(float(liqs.median()), 1)
+            if kind != "sector":
+                row["sec"] = g[g["symbol"].isin(mem)]["sector"].mode().iloc[0]
+            # RRG weekly + monthly
+            row["rrg"] = {}
+            for tf in RRG_P:
+                ratio, mom = rrg_series(idx_s, bench[GROUP_BENCH], tf)
+                if len(ratio) >= 2:
+                    row["rrg"][tf] = {"x": [r2(v) for v in ratio], "y": [r2(v) for v in mom],
+                                      "q": quad(ratio.iloc[-1], mom.iloc[-1]), "pq": quad(ratio.iloc[-2], mom.iloc[-2])}
+            # chhota chart: 1 saal ka index vs Nifty 500 (weekly)
+            w = pd.concat([idx_s, bench[GROUP_BENCH]], axis=1, keys=["g", "b"]).dropna().resample("W-FRI").last().iloc[-53:]
+            row["spark"] = {"g": [r2(100 * v / w["g"].iloc[0]) for v in w["g"]], "b": [r2(100 * v / w["b"].iloc[0]) for v in w["b"]]}
+            rows.append(row)
+        # rank per timeframe (equal-weight return) + rank change
+        for k in list(TF) + ["YTD"]:
+            cur = sorted([r for r in rows if r["ret"][k] is not None], key=lambda r: -r["ret"][k])
+            prv = sorted([r for r in rows if r["ret_prev"][k] is not None], key=lambda r: -r["ret_prev"][k])
+            pr = {r["name"]: i + 1 for i, r in enumerate(prv)}
+            for i, r in enumerate(cur):
+                r.setdefault("rank", {})[k] = i + 1
+                r.setdefault("rchg", {})[k] = (pr[r["name"]] - (i + 1)) if r["name"] in pr else None
+        for r in rows:
+            r.pop("ret_prev", None)
+        out_groups[kind] = rows
+
+    # RRG dates
+    rrg_dates = {}
+    for tf in RRG_P:
+        b = bench[GROUP_BENCH].resample("W-FRI" if tf == "weekly" else "ME").last().dropna()
+        real = pd.Series(bench.index, index=bench.index).resample("W-FRI" if tf == "weekly" else "ME").last().dropna()
+        rrg_dates[tf] = [d.strftime("%d %b %y") for d in real.iloc[-RRG_P[tf][3]:]]
+    bm = {k: {"ret": {kk: pct(ret_over(bench[k], n)) for kk, n in TF.items()}} for k in bench.columns}
+    for k in bm:
+        bm[k]["ret"]["YTD"] = pct(ytd_ret(bench[k]))
+    return {
+        "asof": last_day.strftime("%d %b %Y"),
+        "generated": dt.datetime.now(dt.timezone(dt.timedelta(hours=5, minutes=30))).strftime("%d %b %Y, %I:%M %p IST"),
+        "universe": len(groups), "priced": len(have),
+        "bench": bm, "rrg_dates": rrg_dates, "groups": out_groups, "stocks": stocks,
+    }
 
 
-# ── RRG universe (Strike-style chart: sab indices, daily + weekly) ──────────
-UNIVERSE = {
-    "Sectors": ["Nifty Bank", "Nifty Private Bank", "Nifty PSU Bank", "Nifty Financial Services",
-                "Nifty Capital Markets", "Nifty Insurance", "Nifty IT", "Nifty Auto", "Nifty Pharma",
-                "Nifty Healthcare Index", "Nifty Hospitals", "Nifty FMCG", "Nifty Consumer Durables",
-                "Nifty Metal", "Nifty Realty", "Nifty Energy", "Nifty Oil & Gas", "Nifty Infrastructure",
-                "Nifty Capital Goods", "Nifty Cement", "Nifty Chemicals", "Nifty PSE", "Nifty CPSE",
-                "Nifty Media", "Nifty India Consumption", "Nifty India Defence", "Nifty India Railways PSU",
-                "Nifty India Manufacturing", "Nifty MNC", "Nifty Commodities", "Nifty Housing",
-                "Nifty India Tourism", "Nifty EV & New Age Automotive", "Nifty India Digital"],
-    "Broad market": ["Nifty Next 50", "Nifty 100", "Nifty 200", "Nifty 500", "NIFTY LargeMidcap 250",
-                     "Nifty Midcap 50", "NIFTY Midcap 100", "Nifty Midcap 150", "Nifty Midcap Select",
-                     "Nifty MidSmallcap 400", "Nifty Smallcap 50", "NIFTY Smallcap 100",
-                     "Nifty Smallcap 250", "Nifty Microcap 250"],
-}
-# timeframe: (smooth, rs_len, mom_len, kitne points rakhne hain)
-TF_PARAMS = {"weekly": (SMOOTH, RS_LEN, MOM_LEN, 52), "daily": (5, 21, 5, 130)}
+# ── Telegram ─────────────────────────────────────────────────────────────
+PHASE = {1: "LEADING", 2: "WEAKENING", 3: "LAGGING", 4: "IMPROVING", 0: "—"}
+EMOJI = {1: "🟢", 2: "🟡", 3: "🔴", 4: "🔵", 0: "⚪"}
 
 
-def short_name(n):
-    s = n
-    for pre in ("NIFTY ", "Nifty "):
-        if s.startswith(pre):
-            s = s[len(pre):]
-    s = s.replace("India ", "").replace(" Index", "").replace("Financial Services", "Fin Services")
-    return s.replace("EV & New Age Automotive", "EV & New Age Auto")
-
-
-def rrg_universe(nse):
-    """nse = wide DataFrame (date x NSE index name). Har timeframe ke liye RS-Ratio/Mom series."""
-    import nse_data
-    bcol = nse_data.pick(nse, "Nifty 50")
-    if bcol is None:
-        return None
-    nse = nse[nse[bcol].notna()]
-    out = {}
-    for tf, (sm, rl, ml, keep) in TF_PARAMS.items():
-        if tf == "weekly":
-            df = nse.resample("W-FRI").last()
-            real = pd.Series(nse.index, index=nse.index).resample("W-FRI").last()  # hafte ka asli last din
-        else:
-            df = nse
-            real = pd.Series(nse.index, index=nse.index)
-        df = df[df[bcol].notna()]
-        b = df[bcol]
-        idx = df.index[-keep:]
-        labels = real.reindex(idx)
-        series = []
-        for grp, names in UNIVERSE.items():
-            for n in names:
-                col = nse_data.pick(df, n)
-                if col is None:
-                    continue
-                c = df[col]
-                rs = 100 * c / b
-                rs_s = rs.ewm(span=sm, adjust=False, ignore_na=True).mean()
-                ratio = 100 * rs_s / rs_s.rolling(rl).mean()
-                mom = 100 * ratio / ratio.shift(ml)
-                ratio, mom = ratio.reindex(idx), mom.reindex(idx)
-                if ratio.notna().sum() < 2:
-                    continue
-                cl = c.reindex(idx)
-                last = cl.dropna()
-                chg = float((last.iloc[-1] / last.iloc[-2] - 1) * 100) if len(last) > 1 else None
-                f = lambda v: None if pd.isna(v) else round(float(v), 2)
-                series.append({"name": short_name(n), "full": n, "group": grp,
-                               "rs": [f(v) for v in ratio], "mom": [f(v) for v in mom],
-                               "price": f(last.iloc[-1]) if len(last) else None,
-                               "chg": None if chg is None else round(chg, 2)})
-        out[tf] = {"dates": [d.strftime("%d %b %y") for d in labels],
-                   "bench": [None if pd.isna(v) else round(float(v), 2) for v in b.reindex(idx)],
-                   "series": series}
-    return out
-
-
-# ── Stock RRG: har sector ke stocks vs us sector ka index ──────────────────
-STOCK_KEEP = {"weekly": 52, "daily": 60}
-
-
-def stock_rrg(daily, cons_map):
-    out = {}
-    for name, _, _ in SECTORS:
-        tk = "SEC::" + name
-        syms = [x for x in cons_map.get(name, []) if x in daily]
-        if tk not in daily or len(syms) < 3:
-            continue
-        key = short_name(NSE_NAMES.get(name, [name])[0])
-        sec_out = {"index": NSE_NAMES.get(name, [name])[0]}
-        base = daily[[tk] + syms]
-        base = base[base[tk].notna()]
-        for tf, (sm, rl, ml, _) in TF_PARAMS.items():
-            keep = STOCK_KEEP[tf]
-            if tf == "weekly":
-                df = base.resample("W-FRI").last()
-                real = pd.Series(base.index, index=base.index).resample("W-FRI").last()
-            else:
-                df, real = base, pd.Series(base.index, index=base.index)
-            df = df[df[tk].notna()]
-            b = df[tk]
-            idx = df.index[-keep:]
-            f = lambda v: None if pd.isna(v) else round(float(v), 2)
-            series = []
-            for sym in syms:
-                c = df[sym].ffill(limit=3)
-                if c.notna().sum() < rl + ml + 5:
-                    continue
-                rs = 100 * c / b
-                rs_s = rs.ewm(span=sm, adjust=False, ignore_na=True).mean()
-                ratio = 100 * rs_s / rs_s.rolling(rl).mean()
-                mom = 100 * ratio / ratio.shift(ml)
-                ratio, mom = ratio.reindex(idx), mom.reindex(idx)
-                if ratio.notna().sum() < 2:
-                    continue
-                last = c.reindex(idx).dropna()
-                chg = float((last.iloc[-1] / last.iloc[-2] - 1) * 100) if len(last) > 1 else None
-                series.append({"name": sym.replace(".NS", ""), "full": sym.replace(".NS", ""), "group": key,
-                               "rs": [f(v) for v in ratio], "mom": [f(v) for v in mom],
-                               "price": f(last.iloc[-1]) if len(last) else None,
-                               "chg": None if chg is None else round(chg, 2)})
-            sec_out[tf] = {"dates": [d.strftime("%d %b %y") for d in real.reindex(idx)],
-                           "bench": [f(v) for v in b.reindex(idx)], "series": series}
-        out[key] = sec_out
-    return out
-
-
-# ── RRG photo (Telegram alert ke liye) ─────────────────────────────────────
-CORE_SHORT = ["Bank", "Private Bank", "PSU Bank", "Fin Services", "IT", "Auto", "Pharma", "Healthcare", "FMCG",
-              "Metal", "Realty", "Energy", "Oil & Gas", "Infrastructure", "PSE", "Media", "Consumption", "Defence"]
-
-
-def make_chart_png(rrg_all, path, tail=8):
-    import matplotlib
-    matplotlib.use("Agg")
-    import matplotlib.pyplot as plt
-    from matplotlib.patches import Rectangle
-    T = rrg_all["weekly"]
-    end = len(T["dates"]) - 1
-    start = max(0, end - tail + 1)
-    col = {1: "#16a34a", 2: "#d97706", 3: "#dc2626", 4: "#2563eb", 0: "#888888"}
-    vis = [s for s in T["series"] if s["name"] in CORE_SHORT]
-    xs, ys = [100], [100]
-    for s in vis:
-        for i in range(start, end + 1):
-            if s["rs"][i] is not None and s["mom"][i] is not None:
-                xs.append(s["rs"][i]); ys.append(s["mom"][i])
-    x0, x1, y0, y1 = min(xs), max(xs), min(ys), max(ys)
-    px, py = max((x1 - x0) * .08, .4), max((y1 - y0) * .08, .4)
-    x0, x1, y0, y1 = x0 - px, x1 + px, y0 - py, y1 + py
-    fig, ax = plt.subplots(figsize=(10, 8), dpi=130)
-    fig.patch.set_facecolor("#0d1117"); ax.set_facecolor("#0d1117")
-    for (a, b, c, d, q) in [(x0, 100, 100, y1, 4), (100, x1, 100, y1, 1), (100, x1, y0, 100, 2), (x0, 100, y0, 100, 3)]:
-        ax.add_patch(Rectangle((a, c), b - a, d - c, color=col[q], alpha=.13, lw=0))
-    ax.axhline(100, color="#e6edf3", lw=.8, alpha=.6); ax.axvline(100, color="#e6edf3", lw=.8, alpha=.6)
-    kw = dict(fontsize=12, fontweight="bold", alpha=.9)
-    ax.text(x0 + (x1 - x0) * .01, y1 - (y1 - y0) * .03, "IMPROVING", color=col[4], va="top", **kw)
-    ax.text(x1 - (x1 - x0) * .01, y1 - (y1 - y0) * .03, "LEADING", color=col[1], va="top", ha="right", **kw)
-    ax.text(x1 - (x1 - x0) * .01, y0 + (y1 - y0) * .02, "WEAKENING", color=col[2], ha="right", **kw)
-    ax.text(x0 + (x1 - x0) * .01, y0 + (y1 - y0) * .02, "LAGGING", color=col[3], **kw)
-    for s in vis:
-        pts = [(s["rs"][i], s["mom"][i]) for i in range(start, end + 1) if s["rs"][i] is not None and s["mom"][i] is not None]
-        if not pts:
-            continue
-        q = quad(*pts[-1]); c = col[q]
-        px_, py_ = zip(*pts)
-        ax.plot(px_, py_, color=c, lw=1.6, alpha=.85)
-        ax.scatter(px_[:-1], py_[:-1], s=9, color=c, alpha=.6, zorder=3)
-        if len(pts) > 1:
-            ax.annotate("", xy=pts[-1], xytext=pts[-2], arrowprops=dict(arrowstyle="-|>", color=c, lw=1.6, mutation_scale=14))
-        else:
-            ax.scatter([pts[-1][0]], [pts[-1][1]], s=40, color=c, zorder=4)
-        ax.text(pts[-1][0], pts[-1][1] + (y1 - y0) * .012, " " + s["name"], color="#e6edf3", fontsize=9.5, zorder=5)
-    ax.set_xlim(x0, x1); ax.set_ylim(y0, y1)
-    ax.tick_params(colors="#8b949e", labelsize=9)
-    for sp in ax.spines.values():
-        sp.set_color("#30363d")
-    ax.grid(color="#30363d", lw=.5, alpha=.6)
-    ax.set_xlabel("RS-Ratio (Nifty 50 se taqat) →", color="#8b949e")
-    ax.set_ylabel("RS-Momentum →", color="#8b949e")
-    ax.set_title(f"Sector Rotation (RRG) — {T['dates'][start]} se {T['dates'][end]} · {tail} hafte · The Trade Tribe",
-                 color="#e6edf3", fontsize=12.5, loc="left")
-    fig.text(.99, .01, "Data: NSE official indices · Educational only", color="#8b949e", fontsize=8, ha="right")
-    fig.tight_layout()
-    fig.savefig(path, facecolor=fig.get_facecolor())
-    plt.close(fig)
-    return path
-
-
-def send_photo(path, caption=""):
-    import requests
-    tok = (os.environ.get("TELEGRAM_BOT_TOKEN") or "").strip().replace(" ", "")
-    chat = (os.environ.get("TELEGRAM_CHAT_ID") or "").strip().replace(" ", "")
-    if not tok or not chat:
-        return {"photo": "no secrets"}
-    try:
-        with open(path, "rb") as fh:
-            r = requests.post(f"https://api.telegram.org/bot{tok}/sendPhoto",
-                              data={"chat_id": chat, "caption": caption[:1000]}, files={"photo": fh}, timeout=60)
-        out = {"photo_status": r.status_code}
-        if r.status_code != 200:
-            out["photo_error"] = r.json().get("description")
-        return out
-    except Exception as e:
-        return {"photo_exception": str(e)[:200].replace(tok, "***")}
-
-
-# ── Alert text ───────────────────────────────────────────────────────
 def alert_text(res, url=""):
-    lines = [f"📊 *Trade Tribe — Weekly Sector Rotation*", f"_Week ending {res['asof']}_", ""]
-    changes = []
-    for s in res["sectors"]:
-        c, p = s["phase"], s["prev_phase"]
-        if c == p or 0 in (c, p):
-            continue
-        if c == 1:
-            changes.append(f"🟢 *{s['name']}* → LEADING. Top stocks dekho.")
-        elif c == 4 and p == 3:
-            changes.append(f"🔵 *{s['name']}* → IMPROVING. Watchlist mein daalo (early).")
-        elif c == 2 and p == 1:
-            changes.append(f"🟡 *{s['name']}* → WEAKENING. Profit book / SL tight.")
-        elif c == 3:
-            changes.append(f"🔴 *{s['name']}* → LAGGING. Door raho.")
-    lines += (["*Is hafte ke badlav:*"] + changes) if changes else ["Is hafte koi phase change nahi."]
-    lines.append("")
-    for ph in (1, 4):
-        group = [s for s in res["sectors"] if s["phase"] == ph]
-        if group:
-            lines.append(f"{EMOJI[ph]} *{PHASE[ph]}:*")
-            for s in group:
-                b = f", breadth {int(s['breadth'])}%" if s["breadth"] is not None else ""
-                tops = ", ".join(t["symbol"] for t in s["top"][:3] if t["above50"])
-                lines.append(f"• {s['name']} ({s['perf3m']:+.1f}% vs Nifty 3M{b})" + (f"\n   ↳ {tops}" if tops else ""))
-    weak = [s["name"] for s in res["sectors"] if s["phase"] in (2, 3)]
-    if weak:
-        lines += ["", "🟡🔴 Weak/avoid: " + ", ".join(weak)]
+    L = [f"📊 *Trade Tribe — Sector Rotation*", f"_Data: {res['asof']}_", ""]
+    for kind, label, top in (("sector", "Sectors", 99), ("industry", "Industries", 8), ("theme", "Themes", 8)):
+        rows = [r for r in res["groups"][kind] if not r["small"] and "weekly" in r["rrg"]]
+        moved = [r for r in rows if r["rrg"]["weekly"]["q"] != r["rrg"]["weekly"]["pq"] and r["rrg"]["weekly"]["q"] in (1, 4)]
+        lead = sorted([r for r in rows if r["rrg"]["weekly"]["q"] == 1], key=lambda r: -(r["rel"]["1M"] or -99))[:top]
+        L.append(f"*{label} — weekly RRG*")
+        if moved:
+            L += [f"{EMOJI[r['rrg']['weekly']['q']]} {r['name']} → {PHASE[r['rrg']['weekly']['q']]}" for r in moved[:top]]
+        if lead:
+            L.append("Leading: " + ", ".join(f"{r['name']} ({r['rel']['1M']:+.1f}%)" for r in lead if r["rel"]["1M"] is not None))
+        L.append("")
+    L.append("_% = 1 mahine ka return Nifty 500 se upar/neeche_")
     if url:
-        lines += ["", f"Full dashboard: {url}"]
-    return "\n".join(lines)
+        L += ["", f"Dashboard: {url}"]
+    return "\n".join(L)
 
 
 def send_telegram(text):
-    """Telegram pe bhejo; result (bina token ke) status mein wapas do."""
     import requests
-    tok = (os.environ.get("TELEGRAM_BOT_TOKEN") or "").strip().replace(" ", "")
-    chat = (os.environ.get("TELEGRAM_CHAT_ID") or "").strip().replace(" ", "")
-    info = {"token_set": bool(tok), "chat_set": bool(chat),
-            "token_shape_ok": bool(tok) and ":" in tok and tok.split(":")[0].isdigit()}
+    tok = (os.environ.get("TELEGRAM_BOT_TOKEN") or "").strip()
+    chat = (os.environ.get("TELEGRAM_CHAT_ID") or "").strip()
     if not tok or not chat:
-        print("Telegram secrets nahi mile — alert skip.")
-        return info
+        print("Telegram secrets nahi mile — alert skip."); return {"sent": False}
     try:
-        me = requests.get(f"https://api.telegram.org/bot{tok}/getMe", timeout=20).json()
-        info["getMe_ok"] = me.get("ok"); info["bot"] = (me.get("result") or {}).get("username")
-        if not me.get("ok"):
-            info["getMe_error"] = me.get("description")
         r = requests.post(f"https://api.telegram.org/bot{tok}/sendMessage",
                           data={"chat_id": chat, "text": text, "parse_mode": "Markdown",
                                 "disable_web_page_preview": "true"}, timeout=30)
-        if r.status_code != 200:  # Markdown me koi ajeeb character ho to plain text bhejo
-            info["markdown_error"] = r.json().get("description")
+        if r.status_code != 200:
             r = requests.post(f"https://api.telegram.org/bot{tok}/sendMessage",
                               data={"chat_id": chat, "text": text.replace("*", "").replace("_", "")}, timeout=30)
-        info["send_status"] = r.status_code
-        if r.status_code != 200:
-            info["send_error"] = r.json().get("description")
+        return {"sent": r.status_code == 200, "status": r.status_code}
     except Exception as e:
-        info["exception"] = str(e)[:200].replace(tok, "***")
-    print("Telegram:", info)
-    return info
+        return {"sent": False, "error": str(e)[:200].replace(tok, "***")}
 
 
-# ── Main ─────────────────────────────────────────────────────────────
+# ── Main ─────────────────────────────────────────────────────────────────
 def main():
     demo = "--demo" in sys.argv
-    status = {"indices": {}, "constituents": {}}
-    nse = pd.DataFrame()
+    groups = load_groups()
+    status = {"mode": "demo" if demo else "live"}
     if demo:
-        daily, cons_map = demo_data()
-        # demo NSE frame: sector series ko NSE naam do
-        nse = pd.DataFrame({"Nifty 50": daily[BENCH]})
-        for (name, _, _), ns in zip(SECTORS, UNIVERSE["Sectors"]):
-            nse[ns] = daily["SEC::" + name]
+        close, vol, bench = demo_data(groups)
+        status["bench_src"] = "demo"
     else:
-        import yfinance as yf
-        cons_map = {name: fetch_constituents(f) for name, _, f in SECTORS}
-        status["constituents"] = {k: len(v) for k, v in cons_map.items()}
-        all_stocks = sorted({s for v in cons_map.values() for s in v})
-        print(f"Downloading {len(all_stocks)} stocks…")
-        stocks = fetch_prices(all_stocks)
-        stocks.index = pd.to_datetime(stocks.index).tz_localize(None).normalize()
-        # 1st choice: NSE official index data; backup: Yahoo; last: equal-weight stocks
-        try:
-            import nse_data
-            nse = nse_data.update_history()
-        except Exception as e:
-            print("NSE data fail:", e)
-            nse = pd.DataFrame()
-        status["nse_days"] = int(len(nse))
-        status["nse_last"] = str(nse.index.max().date()) if len(nse) else None
-        bcol = nse_data.pick(nse, "Nifty 50") if len(nse) else None
-        if bcol and nse[bcol].notna().sum() >= 260:
-            bench = nse[bcol].dropna(); status["benchmark"] = "NSE: " + bcol
-        else:
-            _, bench = fetch_index(BENCH); status["benchmark"] = "Yahoo ^NSEI"
-        cols = {BENCH: bench}
-        for name, cands, _ in SECTORS:
-            used, c = None, None
-            col = nse_data.pick(nse, *NSE_NAMES.get(name, [])) if len(nse) else None
-            if col and nse[col].notna().sum() >= 260:
-                c, used = nse[col].dropna(), "NSE: " + col
-            if c is None:
-                used, c = fetch_index(cands)
-                used = f"Yahoo {used}" if used else None
-            if c is None:
-                syms = [x for x in cons_map.get(name, []) if x in stocks]
-                c = synthetic_index(stocks[syms]) if syms else None
-                used = "equal-weight stocks" if c is not None else None
-            status["indices"][name] = used or "FAILED"
-            print(f"  {name}: {status['indices'][name]}")
-            if c is not None:
-                cols["SEC::" + name] = c
-        idx_df = pd.DataFrame(cols)
-        daily = idx_df.join(stocks, how="left")
-        daily = daily[daily[BENCH].notna()]
-    res = analyse(daily, cons_map)
-    try:
-        rrg_all = rrg_universe(nse) if len(nse) else None
-    except Exception as e:
-        print("RRG universe fail:", e); rrg_all = None
-    status["rrg_indices"] = len(rrg_all["weekly"]["series"]) if rrg_all else 0
-    png = None
-    if rrg_all:
-        try:
-            os.makedirs(OUT, exist_ok=True)
-            png = make_chart_png(rrg_all, os.path.join(OUT, "rrg.png"))
-        except Exception as e:
-            print("Chart photo fail:", e)
+        bench, status["bench_src"] = fetch_benchmarks()
+        syms = groups["symbol"].tolist()
+        print(f"Downloading {len(syms)} stocks…")
+        close, vol = fetch_prices(syms)
+    missing = sorted(set(groups["symbol"]) - set(close.columns[close.notna().sum() > 30]))
+    status["missing_prices"] = missing
+    res = analyse(groups, close, vol, bench)
+    status.update({"asof": res["asof"], "priced": res["priced"], "universe": res["universe"],
+                   "groups": {k: len(v) for k, v in res["groups"].items()}})
     os.makedirs(OUT, exist_ok=True)
+    payload = json.dumps(res, separators=(",", ":"), allow_nan=False)
     with open(os.path.join(OUT, "data.json"), "w") as f:
-        json.dump(res, f, indent=1)
-    status["sectors_ok"] = len(res["sectors"])
-    with open(os.path.join(OUT, "status.json"), "w") as f:
-        json.dump(status, f, indent=1)
-    tpl = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "dashboard_template.html"), encoding="utf-8").read()
+        f.write(payload)
+    tpl = open(os.path.join(ROOT, "dashboard_template.html"), encoding="utf-8").read()
     with open(os.path.join(OUT, "index.html"), "w", encoding="utf-8") as f:
-        f.write(tpl.replace("/*__DATA__*/null", json.dumps(res)).replace("/*__RRG__*/null", json.dumps(rrg_all, separators=(",", ":"))))
-    if rrg_all:
-        with open(os.path.join(OUT, "rrg.json"), "w") as f:
-            json.dump(rrg_all, f, separators=(",", ":"))
-    try:
-        stocks_rrg = stock_rrg(daily, cons_map)
-        with open(os.path.join(OUT, "rrg_stocks.json"), "w") as f:
-            json.dump(stocks_rrg, f, separators=(",", ":"))
-        status["stock_rrg_sectors"] = len(stocks_rrg)
-    except Exception as e:
-        print("Stock RRG fail:", e)
+        f.write(tpl.replace("/*__DATA__*/null", payload))
     msg = alert_text(res, os.environ.get("DASHBOARD_URL", ""))
     print(msg)
     if not demo and os.environ.get("SEND_ALERT") == "1":
         status["telegram"] = send_telegram(msg)
-        if png and status["telegram"].get("send_status") == 200:
-            status["telegram"].update(send_photo(png, "📊 Main 18 sectors ka RRG (8 hafte). Full interactive chart: " + os.environ.get("DASHBOARD_URL", "")))
-        with open(os.path.join(OUT, "status.json"), "w") as f:
-            json.dump(status, f, indent=1)
+    with open(os.path.join(OUT, "status.json"), "w") as f:
+        json.dump(status, f, indent=1)
+    print("Done:", {k: v for k, v in status.items() if k != "missing_prices"}, "| missing:", len(missing))
 
 
 if __name__ == "__main__":

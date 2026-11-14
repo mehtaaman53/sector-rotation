@@ -1,9 +1,12 @@
-name: Weekly Sector Rotation
+name: Sector Rotation
 
 on:
   schedule:
     - cron: "17 14 * * 1-5"  # Mon–Fri shaam 7:47 IST — sirf dashboard update (koi alert nahi)
     - cron: "17 3 * * 6"     # Shanivar subah 8:47 IST — dashboard + Telegram alert
+  push:
+    branches: [main]
+    paths: [rotation.py, dashboard_template.html, data/groups.csv, .github/workflows/weekly.yml]
   workflow_dispatch:
     inputs:
       send_alert:
@@ -21,6 +24,7 @@ concurrency:
 jobs:
   run:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
