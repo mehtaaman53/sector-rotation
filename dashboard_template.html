@@ -17,6 +17,7 @@ button{font:inherit;cursor:pointer}
 .seg button.on{background:var(--sel);color:var(--blue);font-weight:600}
 .seg button .c{color:#9aa3b5;font-weight:400;margin-left:3px}
 .sp{flex:1}
+.sel{border:1px solid var(--line);border-radius:10px;padding:7px 10px;background:#fff;font:inherit;color:var(--ink)}
 .search{border:1px solid var(--line);border-radius:10px;padding:7px 10px;width:200px;background:#fff}
 .chk{display:flex;align-items:center;gap:6px;color:var(--mute);white-space:nowrap}
 .main{flex:1;min-height:0;display:flex;gap:12px;padding:0 14px 8px}
@@ -60,7 +61,8 @@ svg text{font:11px -apple-system,Segoe UI,sans-serif}
 .tip{position:absolute;pointer-events:none;background:#1d2433;color:#fff;padding:6px 9px;border-radius:8px;font-size:11px;display:none;white-space:nowrap;z-index:5}
 .hint{color:var(--mute);font-size:11px;padding:4px 16px 8px}
 @media (max-width:1200px){.left{width:520px}th,td{padding:8px 5px}}
-@media (max-width:900px){html,body{height:auto}body{display:block}.main{flex-direction:column;flex:none}.card{max-height:none}.foot{position:static}.info{gap:10px}.left{width:auto;height:45vh}.right{height:auto;min-height:70vh}.rrgwrap{flex-direction:column}.rlist{width:auto}.search{width:130px}}
+@media (max-width:900px){html,body{height:auto}body{display:block}.main{flex-direction:column;flex:none}.card{max-height:none}.foot{position:static}.info{gap:10px}.left{width:auto;height:45vh}.right{height:auto;min-height:70vh}.rrgwrap{flex-direction:column}.rlist{width:auto}.sel{border:1px solid var(--line);border-radius:10px;padding:7px 10px;background:#fff;font:inherit;color:var(--ink)}
+.search{width:130px}}
 </style>
 </head>
 <body>
@@ -69,8 +71,8 @@ svg text{font:11px -apple-system,Segoe UI,sans-serif}
   <div class="seg" id="kind"></div>
   <div class="seg" id="view"><button data-v="groups" class="on">Groups</button><button data-v="rrg">RRG</button></div>
   <div class="seg" id="tf"></div>
-  <div class="seg" id="rtf" style="display:none"><button data-t="weekly" class="on">Weekly</button><button data-t="monthly">Monthly</button></div>
-  <div class="seg" id="bm"><button data-b="n500">vs Nifty 500</button><button data-b="ew">vs EW market</button></div>
+  <div class="seg" id="rtf" style="display:none"><button data-t="daily">Daily</button><button data-t="weekly" class="on">Weekly</button><button data-t="monthly">Monthly</button></div>
+  <select id="bm" class="sel"><option value="ew">vs Equal-weight market</option><option value="n50">vs Nifty 50</option><option value="n500">vs Nifty 500</option><option value="mid150">vs Nifty Midcap 150</option><option value="sm250">vs Nifty Smallcap 250</option></select>
   <div class="seg" id="tail" style="display:none"><button data-n="5">Tail 5</button><button data-n="10" class="on">Tail 10</button></div>
   <div class="sp"></div>
   <input class="search" id="q" placeholder="Search group / stock…">
@@ -108,14 +110,15 @@ const KINDS=[["sector","Sector"],["industry","Industry"],["theme","Theme"]];
 const TFS=["1D","1W","1M","3M","6M","1Y","YTD"];
 const QN={1:"Leading",4:"Improving",2:"Weakening",3:"Lagging",0:"—"};
 const QC={1:"var(--lead)",4:"var(--imp)",2:"var(--weak)",3:"var(--lag)",0:"#ccd"};
-const DEFAULT_BM="n500";
+const DEFAULT_BM="ew";
 const S={bm:DEFAULT_BM,kind:"industry",view:"groups",tf:"1W",rtf:"weekly",tail:10,small:false,q:"",sel:null,gsort:"rank",gdir:1,ssort:"tf",sdir:-1,pins:new Set(),hover:null,qoff:new Set()};
 const STK=Object.fromEntries(D.stocks.map(s=>[s.s,s]));
 const $=id=>document.getElementById(id);
 const f=(v,d=2)=>v==null?"–":(+v).toFixed(d);
 const sg=(v,d=2,suf="%")=>v==null?'<span>–</span>':`<span class="${v>=0?'pos':'neg'}">${v>0?'+':''}${(+v).toFixed(d)}${suf}</span>`;
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-const RK=()=>S.bm==="ew"?"rrge":"rrg",RL=()=>S.bm==="ew"?"relE":"rel",BN=()=>S.bm==="ew"?"EW market":"Nifty 500";
+const BNM={ew:"Equal-weight market",n50:"Nifty 50",n500:"Nifty 500",mid150:"Midcap 150",sm250:"Smallcap 250"};
+const BN=()=>BNM[S.bm];const RR=g=>g.rrg[S.bm]||{};const RLv=(g,k)=>(g.rel[S.bm]||{})[k];
 const LBL={sector:"Sectors",industry:"Industries",theme:"Themes"};
 
 function load(){try{const h=new URLSearchParams(location.hash.slice(1));for(const k of["kind","view","tf","rtf","bm"])if(h.get(k))S[k]=h.get(k);if(h.get("g"))S.sel=h.get("g")}catch(e){}}
@@ -129,7 +132,7 @@ function groups(){
 }
 function gval(g,k){
   if(k==="rank")return g.rank?.[S.tf]??1e9; if(k==="name")return g.name;
-  if(k==="ret")return g.ret[S.tf]??-1e9; if(k==="med")return g.med[S.tf]??-1e9; if(k==="rel")return g[RL()][S.tf]??-1e9;
+  if(k==="ret")return g.ret[S.tf]??-1e9; if(k==="med")return g.med[S.tf]??-1e9; if(k==="rel")return RLv(g,S.tf)??-1e9;
   if(k==="b50")return g.b50; if(k==="hl")return g.h20-g.l20; if(k==="n")return g.n; return 0;
 }
 function seg(el,items,cur,cb){el.innerHTML=items.map(([v,l,c])=>`<button data-v="${v}" class="${v===cur?'on':''}">${l}${c!=null?`<span class="c">(${c})</span>`:''}</button>`).join("");
@@ -140,7 +143,7 @@ function renderTop(){
   seg($("tf"),TFS.map(t=>[t,t]),S.tf,v=>{S.tf=v;render()});
   $("view").querySelectorAll("button").forEach(b=>{b.classList.toggle("on",b.dataset.v===S.view);b.onclick=()=>{S.view=b.dataset.v;render()}});
   $("rtf").querySelectorAll("button").forEach(b=>{b.classList.toggle("on",b.dataset.t===S.rtf);b.onclick=()=>{S.rtf=b.dataset.t;render()}});
-  $("bm").querySelectorAll("button").forEach(b=>{b.classList.toggle("on",b.dataset.b===S.bm);b.onclick=()=>{S.bm=b.dataset.b;render()}});
+  $("bm").value=S.bm;$("bm").onchange=e=>{S.bm=e.target.value;render()};
   $("tail").querySelectorAll("button").forEach(b=>{b.classList.toggle("on",+b.dataset.n===S.tail);b.onclick=()=>{S.tail=+b.dataset.n;render()}});
   const rr=S.view==="rrg";$("tf").style.display=rr?"none":"";$("rtf").style.display=rr?"":"none";$("tail").style.display=rr?"":"none";
   $("groupsView").style.display=rr?"none":"";$("rrgView").style.display=rr?"":"none";
@@ -149,13 +152,13 @@ function renderTop(){
 function renderGroups(){
   const gs=groups().slice().sort((a,b)=>{const x=gval(a,S.gsort),y=gval(b,S.gsort);return (x<y?-1:x>y?1:0)*S.gdir});
   $("lt").textContent=LBL[S.kind];$("lc").textContent=gs.length;
-  const H=[["name","Group"],["rank","Rank"],["ret","EW "+S.tf],["med","Med "+S.tf],["rel",S.bm==="ew"?"vs EW":"vs N500"],["b50",">50DMA"],["hl","20D H/L"]];
+  const H=[["name","Group"],["rank","Rank"],["med","Median "+S.tf],["rel","vs "+({ew:"Market",n50:"N50",n500:"N500",mid150:"Mid150",sm250:"SC250"})[S.bm]],["b50",">50 DMA"],["hl","20D H/L"]];
   let h="<tr>"+H.map(([k,l])=>`<th data-k="${k}">${l}${S.gsort===k?(S.gdir>0?" ▲":" ▼"):""}</th>`).join("")+"</tr>";
   for(const g of gs){
     const rc=g.rchg?.[S.tf];const sup=rc?`<sup class="${rc>0?'pos':'neg'}">${rc>0?'+':'−'}${Math.abs(rc)}</sup>`:"";
     const sz=g.size==="Broad"||g.size==="Medium"?"":`<span class="badge gr">${g.n}</span>`;
     h+=`<tr class="g ${g.name===S.sel?'on':''}" data-n="${esc(g.name)}"><td><span class="gname" title="${esc(g.name)}">${esc(g.name)}</span>${sz}</td>
-    <td>${g.rank?.[S.tf]??"–"}${sup}</td><td>${sg(g.ret[S.tf])}</td><td>${sg(g.med[S.tf])}</td><td>${sg(g[RL()][S.tf])}</td>
+    <td>${g.rank?.[S.tf]??"–"}${sup}</td><td>${sg(g.med[S.tf])}</td><td>${sg(RLv(g,S.tf))}</td>
     <td>${f(g.b50,0)}%</td><td><span class="pos">${g.h20}</span>/<span class="neg">${g.l20}</span></td></tr>`;
   }
   $("gt").innerHTML=h||'<tr><td class="empty">Kuch nahi mila</td></tr>';
@@ -166,7 +169,7 @@ function renderGroups(){
 }
 
 function spark(g){
-  const a=g.spark.g,b=S.bm==="ew"?g.spark.e:g.spark.b;if(!a||a.length<2)return"";
+  const a=g.spark.g,b=g.spark[S.bm]||[];if(!a||a.length<2)return"";
   const W=260,H=54,all=a.concat(b).filter(v=>v!=null),mn=Math.min(...all),mx=Math.max(...all);
   const P=arr=>arr.map((v,i)=>`${(i/(arr.length-1)*W).toFixed(1)},${(H-(v-mn)/(mx-mn||1)*H).toFixed(1)}`).join(" ");
   return `<svg width="${W}" height="${H}" style="overflow:visible"><polyline points="${P(b)}" fill="none" stroke="#b8c0d0" stroke-width="1.5" stroke-dasharray="3 3"/>
@@ -177,12 +180,12 @@ function renderDetail(){
   const g=D.groups[S.kind].find(x=>x.name===S.sel);
   if(!g){$("dn").textContent="—";$("st").innerHTML="";$("dinfo").innerHTML="";return}
   $("dn").textContent=g.name;$("dc").textContent=`${g.n} stocks`+(g.sec?` · ${g.sec}`:"");
-  const G=g[RK()],ph=tf=>G[tf]?`<span class="ph q${G[tf].q}" title="Pichhla: ${QN[G[tf].pq]} · vs ${BN()}">${tf==="weekly"?"W":"M"}: ${QN[G[tf].q]}</span> `:"";
-  $("dph").innerHTML=ph("weekly")+ph("monthly");
+  const G=RR(g),ph=tf=>G[tf]?`<span class="ph q${G[tf].q}" title="Pichhla: ${QN[G[tf].pq]} · vs ${BN()}">${({daily:"D",weekly:"W",monthly:"M"})[tf]}: ${QN[G[tf].q]}</span> `:"";
+  $("dph").innerHTML=ph("daily")+ph("weekly")+ph("monthly");
   const cm=Object.entries(g.capmix).filter(([,v])=>v).map(([k,v])=>`${k} ${v}`).join(" · ");
   const microW=g.micro>=0.7?'<span class="badge lo">Mostly Micro</span>':"";
-  $("dinfo").innerHTML=`<div>${spark(g)}<div style="font-size:10px;color:var(--mute)"><span style="color:var(--blue)">━</span> Group (equal-weight) &nbsp; <span style="color:#b8c0d0">┅</span> ${BN()} · 1 saal</div></div>
-  <div class="kv"><b>${sg(g.ret[S.tf])}</b><span>Return ${S.tf}</span></div><div class="kv"><b>${sg(g[RL()][S.tf])}</b><span>vs ${BN()}</span></div>
+  $("dinfo").innerHTML=`<div>${spark(g)}<div style="font-size:10px;color:var(--mute)"><span style="color:var(--blue)">━</span> Group (har stock barabar) &nbsp; <span style="color:#b8c0d0">┅</span> ${BN()} · 1 saal</div></div>
+  <div class="kv"><b>${sg(g.med[S.tf])}</b><span>Median return ${S.tf}</span></div><div class="kv"><b>${sg(RLv(g,S.tf))}</b><span>vs ${BN()}</span></div><div class="kv"><b>${f(g.score?.[S.tf],0)}</b><span>Score (0–100)</span></div><div class="kv"><b>${f(g.part?.[S.tf],0)}%</b><span>Stocks jo market se aage</span></div>
   <div class="kv"><b>${f(g.b20,0)} / ${f(g.b50,0)} / ${f(g.b200,0)}%</b><span>Above 20/50/200 DMA</span></div>
   <div class="kv"><b>${f(g.nh,0)}%</b><span>52W high ke 10% andar</span></div>
   <div><span class="tag">Size: ${g.size}</span><span class="tag">Liquidity ₹${f(g.liq,1)} cr/din</span><span class="tag">${cm}</span>${microW}</div>`;
@@ -210,24 +213,24 @@ function renderFoot(g,rows){
   $("foot").innerHTML=`<button id="cp">Copy to TradingView</button><button id="csv">CSV</button>
   <span>${g?esc(g.name)+" · "+rows.length+" stocks":""}</span><span class="sp"></span>
   <span>${shown} of ${n} ${LBL[S.kind].toLowerCase()}${S.small?"":" · small groups chhupe"}</span>
-  <span>Data: ${D.asof}</span><span>Universe ${D.priced}/${D.universe}</span><span>Equal-weight · Group vs ${BN()}</span><span>Not investment advice</span>`;
+  <span>Data: ${D.asof}</span><span>Universe ${D.priced}/${D.universe}</span><span>Har group mein har stock barabar · Compare: ${BN()}</span><span>Not investment advice</span>`;
   $("cp").onclick=()=>{const t=rows.map(x=>"NSE:"+x.s).join(",");navigator.clipboard?.writeText(t).then(()=>{$("cp").textContent="Copied ✓";setTimeout(()=>$("cp").textContent="Copy to TradingView",1500)})};
   $("csv").onclick=()=>{const c=["symbol,cap,ltp,1d,"+S.tf+",from_52w_hi,rs,themes"].concat(rows.map(x=>[x.s,x.cap,x.p,x.r["1D"],x.r[S.tf],x.hi,x.rs,'"'+x.th.join("|")+'"'].join(","))).join("\n");
     const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([c],{type:"text/csv"}));a.download=(g?g.name:"group").replace(/\W+/g,"_")+".csv";a.click()};
 }
 
 /* ── RRG ─────────────────────────────── */
-function rrgGroups(){return groups().filter(g=>g[RK()][S.rtf])}
+function rrgGroups(){return groups().filter(g=>RR(g)[S.rtf])}
 function renderRRG(){
   const gs=rrgGroups(),dates=D.rrg_dates[S.rtf];
-  $("rdate").textContent=`${S.rtf==="weekly"?"Weekly":"Monthly"} · ${LBL[S.kind]} vs ${BN()} · ${dates[dates.length-1]||""}`;
-  const cnt={1:0,4:0,2:0,3:0};gs.forEach(g=>cnt[g[RK()][S.rtf].q]=(cnt[g[RK()][S.rtf].q]||0)+1);
+  $("rdate").textContent=`${({daily:"Daily",weekly:"Weekly",monthly:"Monthly"})[S.rtf]} · ${LBL[S.kind]} vs ${BN()} · ${dates[dates.length-1]||""}`;
+  const cnt={1:0,4:0,2:0,3:0};gs.forEach(g=>cnt[RR(g)[S.rtf].q]=(cnt[RR(g)[S.rtf].q]||0)+1);
   $("qchips").innerHTML=[1,4,2,3].map(q=>`<span class="chip ${S.qoff.has(q)?'off':''}" data-q="${q}"><span class="dot" style="background:${QC[q]}"></span>${QN[q]} <b>${cnt[q]||0}</b></span>`).join("");
   $("qchips").querySelectorAll(".chip").forEach(c=>c.onclick=()=>{const q=+c.dataset.q;S.qoff.has(q)?S.qoff.delete(q):S.qoff.add(q);renderRRG()});
-  const vis=gs.filter(g=>!S.qoff.has(g[RK()][S.rtf].q));
+  const vis=gs.filter(g=>!S.qoff.has(RR(g)[S.rtf].q));
   // side list
-  let L="";for(const q of [1,4,2,3]){const arr=vis.filter(g=>g[RK()][S.rtf].q===q).sort((a,b)=>(b[RL()]["1M"]??-99)-(a[RL()]["1M"]??-99));if(!arr.length)continue;
-    L+=`<h4><span class="dot" style="background:${QC[q]}"></span>${QN[q]} ${arr.length}</h4><div class="rl">`+arr.map(g=>{const r=g[RK()][S.rtf],n=r.x.length,dx=r.x[n-1]-r.x[Math.max(0,n-2)],dy=r.y[n-1]-r.y[Math.max(0,n-2)];
+  let L="";for(const q of [1,4,2,3]){const arr=vis.filter(g=>RR(g)[S.rtf].q===q).sort((a,b)=>(RLv(b,"1M")??-99)-(RLv(a,"1M")??-99));if(!arr.length)continue;
+    L+=`<h4><span class="dot" style="background:${QC[q]}"></span>${QN[q]} ${arr.length}</h4><div class="rl">`+arr.map(g=>{const r=RR(g)[S.rtf],n=r.x.length,dx=r.x[n-1]-r.x[Math.max(0,n-2)],dy=r.y[n-1]-r.y[Math.max(0,n-2)];
       const ang=Math.atan2(-dy,dx)*180/Math.PI;return `<div class="${S.pins.has(g.name)?'pin':''}" data-n="${esc(g.name)}"><span title="${esc(g.name)}">${esc(g.name)}</span><span style="display:inline-block;transform:rotate(${ang}deg);color:${QC[q]}">➜</span></div>`}).join("")+"</div>"}
   $("rlist").innerHTML=L||'<div class="empty">Koi group nahi</div>';
   $("rlist").querySelectorAll(".rl div").forEach(d=>{d.onmouseenter=()=>{S.hover=d.dataset.n;draw(vis)};d.onmouseleave=()=>{S.hover=null;draw(vis)};
@@ -238,7 +241,7 @@ function openGroup(n){S.view="groups";S.sel=n;render()}
 function draw(vis){
   const svg=$("rsvg"),box=$("rc").getBoundingClientRect(),W=Math.max(300,box.width),H=Math.max(300,box.height),P=34;
   const tail=S.tail,focus=S.pins.size||S.hover;
-  let xs=[],ys=[];vis.forEach(g=>{const r=g[RK()][S.rtf],k=Math.max(0,r.x.length-tail);xs.push(...r.x.slice(k).filter(v=>v!=null));ys.push(...r.y.slice(k).filter(v=>v!=null))});
+  let xs=[],ys=[];vis.forEach(g=>{const r=RR(g)[S.rtf],k=Math.max(0,r.x.length-tail);xs.push(...r.x.slice(k).filter(v=>v!=null));ys.push(...r.y.slice(k).filter(v=>v!=null))});
   const span=(a,c)=>{const d=Math.max(Math.abs(Math.max(...a,c)-c),Math.abs(Math.min(...a,c)-c),1)*1.08;return[c-d,c+d]};
   const [x0,x1]=xs.length?span(xs,100):[95,105],[y0,y1]=ys.length?span(ys,100):[95,105];
   const X=v=>P+(v-x0)/(x1-x0)*(W-2*P),Y=v=>H-P-(v-y0)/(y1-y0)*(H-2*P);
@@ -249,7 +252,7 @@ function draw(vis){
   <text x="${W/2}" y="${H-8}" fill="#6b7487" text-anchor="middle">RS-Ratio (Strength) →</text><text x="12" y="${H/2}" fill="#6b7487" transform="rotate(-90 12 ${H/2})" text-anchor="middle">RS-Momentum →</text>`;
   const order=vis.slice().sort((a,b)=>(focus&&(S.pins.has(a.name)||S.hover===a.name))-(focus&&(S.pins.has(b.name)||S.hover===b.name)));
   for(const g of order){
-    const r=g[RK()][S.rtf],k=Math.max(0,r.x.length-tail),px=r.x.slice(k),py=r.y.slice(k),q=r.q,on=S.pins.has(g.name)||S.hover===g.name;
+    const r=RR(g)[S.rtf],k=Math.max(0,r.x.length-tail),px=r.x.slice(k),py=r.y.slice(k),q=r.q,on=S.pins.has(g.name)||S.hover===g.name;
     const op=focus?(on?1:.12):.75,pts=px.map((v,i)=>`${X(v).toFixed(1)},${Y(py[i]).toFixed(1)}`).join(" ");
     s+=`<polyline points="${pts}" fill="none" stroke="${QC[q]}" stroke-width="${on?2.4:1.3}" opacity="${op}" stroke-linejoin="round"/>`;
     if(on)px.forEach((v,i)=>{if(i<px.length-1)s+=`<circle cx="${X(v)}" cy="${Y(py[i])}" r="2.2" fill="${QC[q]}"/>`});
@@ -259,8 +262,8 @@ function draw(vis){
   }
   svg.setAttribute("viewBox",`0 0 ${W} ${H}`);svg.innerHTML=s;
   const tip=$("tip");
-  svg.querySelectorAll(".pt").forEach(c=>{const g=vis.find(x=>x.name===c.dataset.n),r=g[RK()][S.rtf];
-    c.onmouseenter=e=>{tip.style.display="block";tip.innerHTML=`<b>${esc(g.name)}</b> · ${g.n} stocks<br>Ratio ${f(r.x[r.x.length-1])} · Mom ${f(r.y[r.y.length-1])}<br>${QN[r.pq]} → ${QN[r.q]} · 1M vs ${BN()} ${g[RL()]["1M"]==null?"–":(g[RL()]["1M"]>0?"+":"")+g[RL()]["1M"]+"%"}`;
+  svg.querySelectorAll(".pt").forEach(c=>{const g=vis.find(x=>x.name===c.dataset.n),r=RR(g)[S.rtf];
+    c.onmouseenter=e=>{tip.style.display="block";tip.innerHTML=`<b>${esc(g.name)}</b> · ${g.n} stocks<br>Ratio ${f(r.x[r.x.length-1])} · Mom ${f(r.y[r.y.length-1])}<br>${QN[r.pq]} → ${QN[r.q]} · 1M vs ${BN()} ${RLv(g,"1M")==null?"–":(RLv(g,"1M")>0?"+":"")+RLv(g,"1M")+"%"}`;
       tip.style.left=(+c.getAttribute("cx")/W*box.width+12)+"px";tip.style.top=(+c.getAttribute("cy")/H*box.height-10)+"px"};
     c.onmouseleave=()=>tip.style.display="none";
     c.onclick=()=>{S.pins.has(g.name)?S.pins.delete(g.name):S.pins.add(g.name);renderRRG()};c.ondblclick=()=>openGroup(g.name)});

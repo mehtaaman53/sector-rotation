@@ -39,7 +39,7 @@ GROUP_BENCH = "NIFTY 500"
 # timeframe → kitne trading din
 TF = {"1D": 1, "1W": 5, "1M": 21, "3M": 63, "6M": 126, "1Y": 252}
 # RRG: (smoothing, RS-Ratio length, Momentum lookback, kitne points rakhne)
-RRG_P = {"weekly": (3, 10, 4, 52), "monthly": (2, 6, 3, 24)}
+RRG_P = {"daily": (5, 21, 5, 12), "weekly": (3, 10, 4, 12), "monthly": (2, 6, 3, 12)}  # last 12 points (tail max 10)
 SMALL_GROUP = 3          # isse kam/barabar stocks = "small group" (default chhupa, toggle se dikhe)
 MAX_DAILY_MOVE = 0.40    # ek din mein 40%+ move = data galti maan ke clip
 
@@ -187,8 +187,8 @@ def quad(r, m):
 def rrg_series(idx_s, bench_s, tf):
     sm, rl, ml, keep = RRG_P[tf]
     df = pd.concat([idx_s, bench_s], axis=1, keys=["g", "b"]).dropna()
-    rule = "W-FRI" if tf == "weekly" else "ME"
-    df = df.resample(rule).last().dropna()
+    if tf != "daily":
+        df = df.resample("W-FRI" if tf == "weekly" else "ME").last().dropna()
     rs = 100 * df["g"] / df["b"]
     rs_s = rs.ewm(span=sm, adjust=False).mean()
     ratio = 100 * rs_s / rs_s.rolling(rl).mean()
@@ -231,6 +231,10 @@ def analyse(groups, close, vol, bench):
         stock_ret[k] = (px.iloc[-1] / px.shift(n).iloc[-1] - 1)
     ytd_base = px[px.index < pd.Timestamp(last_day.year, 1, 1)].iloc[-1] if (px.index < pd.Timestamp(last_day.year, 1, 1)).any() else None
     stock_ret["YTD"] = (px.iloc[-1] / ytd_base - 1) if ytd_base is not None else pd.Series(np.nan, index=px.columns)
+    # 5 din pehle ki position (rank change ke liye)
+    stock_ret_prev = {k: (px.iloc[-6] / px.shift(n).iloc[-6] - 1) for k, n in TF.items()}
+    stock_ret_prev["YTD"] = (px.iloc[-6] / ytd_base - 1) if ytd_base is not None else pd.Series(np.nan, index=px.columns)
+    h20_prev = (px.iloc[-6] >= px.rolling(20).max().iloc[-6] * 0.9999)
     # RS: 3M + 6M return apne benchmark ke against → percentile 1–99
     rel = {}
     for _, r in g.iterrows():
@@ -282,8 +286,15 @@ def analyse(groups, close, vol, bench):
     bench = bench.copy(); bench["EW MARKET"] = ewm.reindex(bench.index)
     bench_ret = {k: ret_over(bench[GROUP_BENCH], n) for k, n in TF.items()}
     bench_ret["YTD"] = ytd_ret(bench[GROUP_BENCH])
-    ew_ret = {k: ret_over(ewm, n) for k, n in TF.items()}
-    ew_ret["YTD"] = ytd_ret(ewm)
+    BK = {"ew": "EW MARKET", "n50": "NIFTY 50", "n500": "NIFTY 500", "mid150": "NIFTY MIDCAP 150", "sm250": "NIFTY SMALLCAP 250"}
+    BK = {k: v for k, v in BK.items() if v in bench.columns and bench[v].notna().sum() > 260}
+    BR = {}
+    for bk, bcol in BK.items():
+        BR[bk] = {k: ret_over(bench[bcol], n) for k, n in TF.items()}
+        BR[bk]["YTD"] = ytd_ret(bench[bcol])
+    MR = BR["ew"]                                  # market = equal-weight (scanthecharts jaisa)
+    ewp = ewm.iloc[:-5]
+    MRP = {k: ret_over(ewp, n) for k, n in TF.items()}; MRP["YTD"] = ytd_ret(ewp)
     out_groups = {}
     for kind in ("sector", "industry", "theme"):
         rows = []
@@ -297,10 +308,9 @@ def analyse(groups, close, vol, bench):
             row["ret"]["YTD"] = pct(ytd_ret(idx_s))
             row["med"] = {k: pct(float(np.nanmedian(stock_ret[k][mem].values))) if stock_ret[k][mem].notna().any() else None
                           for k in list(TF) + ["YTD"]}
-            row["rel"] = {k: None if row["ret"][k] is None or bench_ret[k] is None else round(row["ret"][k] - 100 * bench_ret[k], 2)
-                          for k in row["ret"]}
-            row["relE"] = {k: None if row["ret"][k] is None or ew_ret[k] is None else round(row["ret"][k] - 100 * ew_ret[k], 2)
-                           for k in row["ret"]}
+            # vs benchmark = group ka MEDIAN return − benchmark return (scanthecharts jaisa)
+            row["rel"] = {bk: {k: None if row["med"][k] is None or BR[bk][k] is None else round(row["med"][k] - 100 * BR[bk][k], 2)
+                               for k in row["med"]} for bk in BK}
             # rank change ke liye 5 din pehle ka return
             prev_idx = idx_s.iloc[:-5]
             row["ret_prev"] = {k: pct(ret_over(prev_idx, n)) for k, n in TF.items()}
@@ -310,7 +320,7 @@ def analyse(groups, close, vol, bench):
             row["b50"] = round(100 * float(above["50"][mem].mean()), 0)
             row["b200"] = round(100 * float(above["200"][mem].mean()), 0)
             row["nh"] = round(100 * float((from_hi[mem] >= -0.10).mean()), 0)
-            row["h20"] = int(is20h[mem].sum()); row["l20"] = int(is20l[mem].sum())
+            row["h20"] = int(is20h[mem].sum()); row["l20"] = int(is20l[mem].sum()); row["h20p"] = int(h20_prev[mem].sum())
             # quality tags
             n = len(mem)
             row["size"] = "Single" if n == 1 else "Chhota" if n <= 3 else "Medium" if n <= 9 else "Broad"
@@ -322,18 +332,62 @@ def analyse(groups, close, vol, bench):
             if kind != "sector":
                 row["sec"] = g[g["symbol"].isin(mem)]["sector"].mode().iloc[0]
             # RRG weekly + monthly
-            row["rrg"], row["rrge"] = {}, {}
-            for key, bser in (("rrg", bench[GROUP_BENCH]), ("rrge", ewm)):
+            row["rrg"] = {}
+            for bk, bcol in BK.items():
+                row["rrg"][bk] = {}
                 for tf in RRG_P:
-                    ratio, mom = rrg_series(idx_s, bser, tf)
+                    ratio, mom = rrg_series(idx_s, bench[bcol], tf)
                     if len(ratio) >= 2:
-                        row[key][tf] = {"x": [r2(v) for v in ratio], "y": [r2(v) for v in mom],
-                                        "q": quad(ratio.iloc[-1], mom.iloc[-1]), "pq": quad(ratio.iloc[-2], mom.iloc[-2])}
+                        row["rrg"][bk][tf] = {"x": [r2(v, 1) for v in ratio], "y": [r2(v, 1) for v in mom],
+                                              "q": quad(ratio.iloc[-1], mom.iloc[-1]), "pq": quad(ratio.iloc[-2], mom.iloc[-2])}
             # chhota chart: 1 saal ka index vs Nifty 500 (weekly)
-            w = pd.concat([idx_s, bench[GROUP_BENCH], ewm], axis=1, keys=["g", "b", "e"]).dropna().resample("W-FRI").last().iloc[-53:]
-            row["spark"] = {c: [r2(100 * v / w[c].iloc[0], 1) for v in w[c]] for c in ("g", "b", "e")}
+            w = pd.concat([idx_s] + [bench[c] for c in BK.values()], axis=1, keys=["g"] + list(BK)).dropna().resample("W-FRI").last().iloc[-53:]
+            row["spark"] = {c: [r2(100 * v / w[c].iloc[0], 1) for v in w[c]] for c in w.columns}
             rows.append(row)
-        # rank per timeframe (equal-weight return) + rank change
+        # ── scanthecharts jaisa rank: har timeframe ka score =
+        #    (median return − market return) + participation (% stocks jo market ko hara rahe) + 20D highs %
+        #    teeno ka percentile average → 0–100 score → rank
+        for key in ("cur", "prev"):
+            for k in list(TF) + ["YTD"]:
+                vals = []
+                for r in rows:
+                    m = r["m"]
+                    if key == "cur":
+                        sr = stock_ret[k][m]; mk = MR[k]
+                    else:
+                        sr = stock_ret_prev[k][m]; mk = MRP[k]
+                    if sr.notna().sum() == 0 or mk is None:
+                        vals.append(None); continue
+                    vals.append((float(np.nanmedian(sr)) - mk, float((sr > mk).mean()), float(r["h20"] / len(m)) if key == "cur" else float(r["h20p"] / len(m))))
+                ok = [v for v in vals if v is not None]
+                if not ok:
+                    continue
+                arr = np.array(ok)
+                pr = np.zeros(len(ok))
+                for c in range(3):
+                    pr += pd.Series(arr[:, c]).rank(pct=True).values
+                score = iter(np.round(100 * pr / 3, 1))
+                for r, v in zip(rows, vals):
+                    sc = next(score) if v is not None else None
+                    if key == "cur":
+                        r.setdefault("score", {})[k] = None if sc is None else float(sc)
+                        if v is not None:
+                            r.setdefault("part", {})[k] = round(100 * v[1], 0)
+                    else:
+                        r.setdefault("_ps", {})[k] = None if sc is None else float(sc)
+        for k in list(TF) + ["YTD"]:
+            # rank sirf normal groups mein (small groups ka rank nahi — scanthecharts jaisa)
+            cur = sorted([r for r in rows if not r["small"] and r.get("score", {}).get(k) is not None], key=lambda r: -r["score"][k])
+            prv = sorted([r for r in rows if not r["small"] and r.get("_ps", {}).get(k) is not None], key=lambda r: -r["_ps"][k])
+            pr = {r["name"]: i + 1 for i, r in enumerate(prv)}
+            for i, r in enumerate(cur):
+                r.setdefault("rank", {})[k] = i + 1
+                r.setdefault("rchg", {})[k] = (pr[r["name"]] - (i + 1)) if r["name"] in pr else None
+        for r in rows:
+            r.pop("_ps", None); r.pop("h20p", None); r.pop("ret_prev", None)
+        out_groups[kind] = rows
+        continue
+        # (purana) rank per timeframe (equal-weight return) + rank change
         for k in list(TF) + ["YTD"]:
             cur = sorted([r for r in rows if r["ret"][k] is not None], key=lambda r: -r["ret"][k])
             prv = sorted([r for r in rows if r["ret_prev"][k] is not None], key=lambda r: -r["ret_prev"][k])
@@ -348,8 +402,9 @@ def analyse(groups, close, vol, bench):
     # RRG dates
     rrg_dates = {}
     for tf in RRG_P:
-        b = bench[GROUP_BENCH].resample("W-FRI" if tf == "weekly" else "ME").last().dropna()
-        real = pd.Series(bench.index, index=bench.index).resample("W-FRI" if tf == "weekly" else "ME").last().dropna()
+        real = pd.Series(bench.index, index=bench.index)
+        if tf != "daily":
+            real = real.resample("W-FRI" if tf == "weekly" else "ME").last().dropna()
         rrg_dates[tf] = [d.strftime("%d %b %y") for d in real.iloc[-RRG_P[tf][3]:]]
     bm = {k: {"ret": {kk: pct(ret_over(bench[k], n)) for kk, n in TF.items()}} for k in bench.columns}
     for k in bm:
@@ -358,7 +413,7 @@ def analyse(groups, close, vol, bench):
         "asof": last_day.strftime("%d %b %Y"),
         "generated": dt.datetime.now(dt.timezone(dt.timedelta(hours=5, minutes=30))).strftime("%d %b %Y, %I:%M %p IST"),
         "universe": len(groups), "priced": len(have),
-        "bench": bm, "ew_ret": {k: pct(v) for k, v in ew_ret.items()}, "rrg_dates": rrg_dates, "groups": out_groups, "stocks": stocks,
+        "bench": bm, "bkeys": BK, "rrg_dates": rrg_dates, "groups": out_groups, "stocks": stocks,
     }
 
 
@@ -370,16 +425,16 @@ EMOJI = {1: "🟢", 2: "🟡", 3: "🔴", 4: "🔵", 0: "⚪"}
 def alert_text(res, url=""):
     L = [f"📊 *Trade Tribe — Sector Rotation*", f"_Data: {res['asof']}_", ""]
     for kind, label, top in (("sector", "Sectors", 99), ("industry", "Industries", 8), ("theme", "Themes", 8)):
-        rows = [r for r in res["groups"][kind] if not r["small"] and "weekly" in r["rrg"]]
-        moved = [r for r in rows if r["rrg"]["weekly"]["q"] != r["rrg"]["weekly"]["pq"] and r["rrg"]["weekly"]["q"] in (1, 4)]
-        lead = sorted([r for r in rows if r["rrg"]["weekly"]["q"] == 1], key=lambda r: -(r["rel"]["1M"] or -99))[:top]
+        rows = [r for r in res["groups"][kind] if not r["small"] and "weekly" in r["rrg"].get("ew", {})]
+        moved = [r for r in rows if r["rrg"]["ew"]["weekly"]["q"] != r["rrg"]["ew"]["weekly"]["pq"] and r["rrg"]["ew"]["weekly"]["q"] in (1, 4)]
+        lead = sorted([r for r in rows if r["rrg"]["ew"]["weekly"]["q"] == 1], key=lambda r: -(r["rel"]["ew"]["1M"] or -99))[:top]
         L.append(f"*{label} — weekly RRG*")
         if moved:
-            L += [f"{EMOJI[r['rrg']['weekly']['q']]} {r['name']} → {PHASE[r['rrg']['weekly']['q']]}" for r in moved[:top]]
+            L += [f"{EMOJI[r['rrg']['ew']['weekly']['q']]} {r['name']} → {PHASE[r['rrg']['ew']['weekly']['q']]}" for r in moved[:top]]
         if lead:
-            L.append("Leading: " + ", ".join(f"{r['name']} ({r['rel']['1M']:+.1f}%)" for r in lead if r["rel"]["1M"] is not None))
+            L.append("Leading: " + ", ".join(f"{r['name']} ({r['rel']['ew']['1M']:+.1f}%)" for r in lead if r["rel"]["ew"]["1M"] is not None))
         L.append("")
-    L.append("_% = 1 mahine ka return Nifty 500 se upar/neeche_")
+    L.append("_% = 1 mahine ka median return, Equal-weight market (saare stocks ka average) se upar/neeche_")
     if url:
         L += ["", f"Dashboard: {url}"]
     return "\n".join(L)

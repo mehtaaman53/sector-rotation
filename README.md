@@ -16,17 +16,23 @@ Group badalna ho to bas `data/groups.csv` edit karo (themes `|` se alag). Agla r
 - Har group ka **equal-weight index** (har stock ka barabar wazan)
 - Returns 1D / 1W / 1M / 3M / 6M / 1Y / YTD, **rank + rank change** (5 din pehle se)
 - Breadth: 20/50/200 DMA ke upar %, 52W high ke 10% andar %, 20-din highs/lows
-- **RRG — Weekly aur Monthly** (group vs Nifty 500)
+- **RRG — Daily, Weekly, Monthly**, kisi bhi benchmark ke against
 - Har stock: return, 52W high se doori, **RS** (1–99, apne benchmark ke against), volume ratio
 - Group quality: size, liquidity, cap mix, "Mostly Micro" flag
 
-## Benchmarks
-| Kaun | Kisse compare |
-|---|---|
-| Sector / Industry / Theme | Nifty 500 |
-| Large cap stock (mcap rank 1–100) | Nifty 50 |
-| Mid cap (101–250) | Nifty Midcap 150 |
-| Small (251–500) + Micro (501+) | Nifty Smallcap 250 |
+## Compare kaise hota hai (scanthecharts jaisa)
+Dashboard mein upar dropdown se benchmark chuno — RRG, "vs" column, chart, D/W/M phase sab usi se badalte hain:
+- **Equal-weight market** (default) — saare ~1,800 stocks ka seedha average, har stock ka barabar hissa
+- Nifty 50 · Nifty 500 · Nifty Midcap 150 · Nifty Smallcap 250
+
+**Rank** (har timeframe ka alag): teen cheezon ka score (0–100) —
+1. group ka median return − market return
+2. participation: kitne % stocks market se aage
+3. kitne % stocks 20-din high pe
+
+Small groups (3 ya kam stocks) ko rank nahi milta, wo "Small groups bhi" tick karke dikhte hain.
+
+Stock RS (1–99): Large → Nifty 50, Mid → Midcap 150, Small + Micro → Smallcap 250 ke against.
 
 Data: stocks Yahoo Finance se, benchmarks NSE official (nsearchives) se.
 
@@ -36,7 +42,8 @@ Data: stocks Yahoo Finance se, benchmarks NSE official (nsearchives) se.
 3. Haath se chalana: Actions → "Sector Rotation" → Run workflow
 
 ## RRG formula
-RS = Group ÷ Nifty 500 → EMA smoothing → RS-Ratio = RS ÷ uska average × 100 → RS-Mom = RS-Ratio ÷ kuch period pehle × 100
+RS = Group ÷ Benchmark → EMA smoothing → RS-Ratio = RS ÷ uska average × 100 → RS-Mom = RS-Ratio ÷ kuch period pehle × 100
+- Daily: smoothing 5, ratio 21 din, momentum 5 din
 - Weekly: smoothing 3, ratio 10 hafte, momentum 4 hafte
 - Monthly: smoothing 2, ratio 6 mahine, momentum 3 mahine
 
