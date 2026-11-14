@@ -278,8 +278,12 @@ def analyse(groups, close, vol, bench):
                 m.setdefault(k, []).append(r["symbol"])
         return m
 
+    ewm = ew_index(rets, have)               # equal-weight market (saare stocks barabar)
+    bench = bench.copy(); bench["EW MARKET"] = ewm.reindex(bench.index)
     bench_ret = {k: ret_over(bench[GROUP_BENCH], n) for k, n in TF.items()}
     bench_ret["YTD"] = ytd_ret(bench[GROUP_BENCH])
+    ew_ret = {k: ret_over(ewm, n) for k, n in TF.items()}
+    ew_ret["YTD"] = ytd_ret(ewm)
     out_groups = {}
     for kind in ("sector", "industry", "theme"):
         rows = []
@@ -295,6 +299,8 @@ def analyse(groups, close, vol, bench):
                           for k in list(TF) + ["YTD"]}
             row["rel"] = {k: None if row["ret"][k] is None or bench_ret[k] is None else round(row["ret"][k] - 100 * bench_ret[k], 2)
                           for k in row["ret"]}
+            row["relE"] = {k: None if row["ret"][k] is None or ew_ret[k] is None else round(row["ret"][k] - 100 * ew_ret[k], 2)
+                           for k in row["ret"]}
             # rank change ke liye 5 din pehle ka return
             prev_idx = idx_s.iloc[:-5]
             row["ret_prev"] = {k: pct(ret_over(prev_idx, n)) for k, n in TF.items()}
@@ -316,15 +322,16 @@ def analyse(groups, close, vol, bench):
             if kind != "sector":
                 row["sec"] = g[g["symbol"].isin(mem)]["sector"].mode().iloc[0]
             # RRG weekly + monthly
-            row["rrg"] = {}
-            for tf in RRG_P:
-                ratio, mom = rrg_series(idx_s, bench[GROUP_BENCH], tf)
-                if len(ratio) >= 2:
-                    row["rrg"][tf] = {"x": [r2(v) for v in ratio], "y": [r2(v) for v in mom],
-                                      "q": quad(ratio.iloc[-1], mom.iloc[-1]), "pq": quad(ratio.iloc[-2], mom.iloc[-2])}
+            row["rrg"], row["rrge"] = {}, {}
+            for key, bser in (("rrg", bench[GROUP_BENCH]), ("rrge", ewm)):
+                for tf in RRG_P:
+                    ratio, mom = rrg_series(idx_s, bser, tf)
+                    if len(ratio) >= 2:
+                        row[key][tf] = {"x": [r2(v) for v in ratio], "y": [r2(v) for v in mom],
+                                        "q": quad(ratio.iloc[-1], mom.iloc[-1]), "pq": quad(ratio.iloc[-2], mom.iloc[-2])}
             # chhota chart: 1 saal ka index vs Nifty 500 (weekly)
-            w = pd.concat([idx_s, bench[GROUP_BENCH]], axis=1, keys=["g", "b"]).dropna().resample("W-FRI").last().iloc[-53:]
-            row["spark"] = {"g": [r2(100 * v / w["g"].iloc[0]) for v in w["g"]], "b": [r2(100 * v / w["b"].iloc[0]) for v in w["b"]]}
+            w = pd.concat([idx_s, bench[GROUP_BENCH], ewm], axis=1, keys=["g", "b", "e"]).dropna().resample("W-FRI").last().iloc[-53:]
+            row["spark"] = {c: [r2(100 * v / w[c].iloc[0], 1) for v in w[c]] for c in ("g", "b", "e")}
             rows.append(row)
         # rank per timeframe (equal-weight return) + rank change
         for k in list(TF) + ["YTD"]:
@@ -351,7 +358,7 @@ def analyse(groups, close, vol, bench):
         "asof": last_day.strftime("%d %b %Y"),
         "generated": dt.datetime.now(dt.timezone(dt.timedelta(hours=5, minutes=30))).strftime("%d %b %Y, %I:%M %p IST"),
         "universe": len(groups), "priced": len(have),
-        "bench": bm, "rrg_dates": rrg_dates, "groups": out_groups, "stocks": stocks,
+        "bench": bm, "ew_ret": {k: pct(v) for k, v in ew_ret.items()}, "rrg_dates": rrg_dates, "groups": out_groups, "stocks": stocks,
     }
 
 
