@@ -1,2 +1,4 @@
 __pycache__/
 *.pyc
+# Fyers raw data (private) — kabhi commit nahi
+market-data/

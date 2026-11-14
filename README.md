@@ -34,7 +34,13 @@ Small groups (3 ya kam stocks) ko rank nahi milta, wo "Small groups bhi" tick ka
 
 Stock RS (1–99): Large → Nifty 50, Mid → Midcap 150, Small + Micro → Smallcap 250 ke against.
 
-Data: stocks Yahoo Finance se, benchmarks NSE official (nsearchives) se.
+## Price data kahan se
+1. **Fyers** — aapka private `market-data` repo (1997 se daily OHLCV, 2,700+ stocks + indices). Main source.
+   - Workflow ko padhne ke liye secret `MARKET_DATA_TOKEN` chahiye (GitHub token, sirf market-data padhne ki permission).
+   - Fyers split/bonus adjust karta hai; demerger wale din (khulte hi 35%+ gap) code khud adjust karta hai.
+   - Raw Fyers data is public repo mein kabhi commit nahi hota — sirf dashboard ke results.
+2. **Yahoo Finance** — backup: jo stock Fyers mein nahi, ya jis din ka Fyers data abhi nahi aaya.
+3. Benchmarks: Fyers indices; NSE official (nsearchives) backup.
 
 ## Ek baar ka setup (pehle se ho chuka hai)
 1. Telegram secrets: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` (Settings → Secrets → Actions)

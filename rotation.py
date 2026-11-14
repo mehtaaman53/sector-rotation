@@ -55,7 +55,7 @@ def yahoo_ticker(sym):
     return sym + ".NS"
 
 
-def fetch_prices(syms, period="3y", chunk=60):
+def fetch_prices(syms, period="4y", chunk=60):
     """Stocks ko batches mein Yahoo se laao. Return: close & volume (date x symbol)."""
     import yfinance as yf
     closes, vols = [], []
@@ -104,13 +104,74 @@ def fetch_benchmarks():
         import yfinance as yf
         for k in missing:
             try:
-                h = yf.Ticker(BENCH_YAHOO[k]).history(period="3y", interval="1d", auto_adjust=True)["Close"].dropna()
+                h = yf.Ticker(BENCH_YAHOO[k]).history(period="4y", interval="1d", auto_adjust=True)["Close"].dropna()
                 h.index = h.index.tz_localize(None).normalize()
                 if len(h) > 260:
                     out[k] = h; src[k] = "Yahoo " + BENCH_YAHOO[k]
             except Exception as e:
                 print(f"  bench {k} fail: {e}")
     return pd.DataFrame(out).sort_index(), src
+
+
+# ── Fyers data (market-data repo) ────────────────────────────────────────
+MD_DIR = os.environ.get("MARKET_DATA_DIR", os.path.join(ROOT, "market-data", "data", "daily"))
+FY_BENCH = {"NIFTY 50": "NIFTY50-INDEX", "NIFTY 500": "NIFTY500-INDEX",
+            "NIFTY MIDCAP 150": "NIFTYMIDCAP150-INDEX", "NIFTY SMALLCAP 250": "NIFTYSMLCAP250-INDEX"}
+YEARS = 4
+
+
+def adjust_gaps(df):
+    """Fyers split/bonus adjust karta hai, DEMERGER nahi. Jis din khulte hi bhav 35%+ gira ya 60%+ chadha
+    (open vs pichhla close) — use corporate action maan ke pichhla data us ratio se adjust karo.
+    Din ke andar ki asli giravat (open normal, close neeche) ko nahi chhoote."""
+    if len(df) < 2:
+        return df, 0
+    df = df.astype(float)
+    ratio = df["open"] / df["close"].shift(1)
+    hits = ratio[(ratio < 0.65) | (ratio > 1.6)].dropna()
+    for day, r in hits.items():
+        before = df.index < day
+        for c in ("open", "high", "low", "close"):
+            df.loc[before, c] = df.loc[before, c] * r
+        df.loc[before, "volume"] = df.loc[before, "volume"] / r
+    return df, len(hits)
+
+
+def read_fyers(sym):
+    for name in (sym, sym + "-BE"):
+        p = os.path.join(MD_DIR, name.replace("/", "_") + ".csv.gz")
+        if os.path.exists(p):
+            df = pd.read_csv(p, parse_dates=["date"]).set_index("date").sort_index()
+            df = df[df.index >= pd.Timestamp.today().normalize() - pd.DateOffset(years=YEARS)]
+            df.index = df.index.normalize()
+            return df[~df.index.duplicated(keep="last")]
+    return None
+
+
+def fyers_available():
+    return os.path.isdir(MD_DIR) and len(os.listdir(MD_DIR)) > 500
+
+
+def load_fyers(syms):
+    closes, vols, adj, miss = {}, {}, {}, []
+    for s in syms:
+        df = read_fyers(s)
+        if df is None or df.empty:
+            miss.append(s); continue
+        df, n = adjust_gaps(df.copy())
+        if n:
+            adj[s] = n
+        closes[s], vols[s] = df["close"], df["volume"]
+    return pd.DataFrame(closes).sort_index(), pd.DataFrame(vols).sort_index(), adj, miss
+
+
+def load_fyers_bench():
+    out = {}
+    for k, f in FY_BENCH.items():
+        df = read_fyers(f)
+        if df is not None and len(df) > 260:
+            out[k] = df["close"]
+    return pd.DataFrame(out).sort_index()
 
 
 def demo_data(groups):
@@ -467,10 +528,47 @@ def main():
         close, vol, bench = demo_data(groups)
         status["bench_src"] = "demo"
     else:
-        bench, status["bench_src"] = fetch_benchmarks()
         syms = groups["symbol"].tolist()
-        print(f"Downloading {len(syms)} stocks…")
-        close, vol = fetch_prices(syms)
+        if fyers_available():
+            # 1) Fyers (aapka market-data repo) — main source
+            close, vol, adj, miss = load_fyers(syms)
+            bench = load_fyers_bench()
+            status.update({"price_src": "Fyers (market-data)", "fyers_stocks": close.shape[1],
+                           "fyers_last": close.index.max().strftime("%Y-%m-%d"), "demerger_adjusted": adj})
+            # NSE official se benchmark ka aakhri din check — Fyers peeche ho to Yahoo se baaki din bharo
+            nse_b, _ = fetch_benchmarks()
+            last_needed = max(bench.index.max(), nse_b.index.max())
+            if last_needed > bench.index.max():
+                bench = bench.combine_first(nse_b)
+            stale = [s for s in close.columns if close[s].last_valid_index() is None or close[s].last_valid_index() < last_needed]
+            todo = sorted(set(stale) | set(miss))
+            status["yahoo_filled"] = len(todo)
+            if todo:
+                print(f"Yahoo se bharna: {len(todo)} stocks (Fyers mein nahi / purana)")
+                yc, yv = fetch_prices(todo, period="1mo" if not miss or len(todo) > len(miss) else "4y")
+                if miss:
+                    mc, mv = fetch_prices(miss, period="4y")
+                    yc = yc.combine_first(mc) if not yc.empty else mc
+                    yv = yv.combine_first(mv) if not yv.empty else mv
+                for s in yc.columns:
+                    new = yc[s].dropna()
+                    if s in close.columns:
+                        lv = close[s].last_valid_index()
+                        new = new[new.index > lv] if lv is not None else new
+                    if new.empty:
+                        continue
+                    close = close.reindex(close.index.union(new.index))
+                    vol = vol.reindex(vol.index.union(new.index))
+                    close.loc[new.index, s] = new.values
+                    if s in yv.columns:
+                        vol.loc[new.index, s] = yv[s].reindex(new.index).values
+            status["bench_src"] = {k: "Fyers" for k in bench.columns}
+        else:
+            # 2) Backup: Yahoo + NSE
+            bench, status["bench_src"] = fetch_benchmarks()
+            status["price_src"] = "Yahoo (market-data repo nahi mila)"
+            print(f"Downloading {len(syms)} stocks…")
+            close, vol = fetch_prices(syms)
     missing = sorted(set(groups["symbol"]) - set(close.columns[close.notna().sum() > 30]))
     status["missing_prices"] = missing
     res = analyse(groups, close, vol, bench)
@@ -487,6 +585,7 @@ def main():
     print(msg)
     if not demo and os.environ.get("SEND_ALERT") == "1":
         status["telegram"] = send_telegram(msg)
+    status.pop("demerger_adjusted", None) if False else None
     with open(os.path.join(OUT, "status.json"), "w") as f:
         json.dump(status, f, indent=1)
     print("Done:", {k: v for k, v in status.items() if k != "missing_prices"}, "| missing:", len(missing))
