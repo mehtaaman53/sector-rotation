@@ -1,57 +1,22 @@
 {
- "indices": {
-  "IT": "NSE: Nifty IT",
-  "Bank": "NSE: Nifty Bank",
-  "Pvt Bank": "NSE: Nifty Private Bank",
-  "PSU Bank": "NSE: Nifty PSU Bank",
-  "Fin Services": "NSE: Nifty Financial Services",
-  "Auto": "NSE: Nifty Auto",
-  "Pharma": "NSE: Nifty Pharma",
-  "Healthcare": "NSE: Nifty Healthcare Index",
-  "FMCG": "NSE: Nifty FMCG",
-  "Metal": "NSE: Nifty Metal",
-  "Realty": "NSE: Nifty Realty",
-  "Energy": "NSE: Nifty Energy",
-  "Oil & Gas": "NSE: Nifty Oil & Gas",
-  "Infra": "NSE: Nifty Infrastructure",
-  "PSE": "NSE: Nifty PSE",
-  "Media": "NSE: Nifty Media",
-  "Consumption": "NSE: Nifty India Consumption",
-  "Defence": "NSE: Nifty India Defence"
+ "mode": "live",
+ "bench_src": {
+  "NIFTY 50": "NSE: Nifty 50",
+  "NIFTY 500": "NSE: Nifty 500",
+  "NIFTY MIDCAP 150": "NSE: Nifty Midcap 150",
+  "NIFTY SMALLCAP 250": "NSE: Nifty Smallcap 250"
  },
- "constituents": {
-  "IT": 10,
-  "Bank": 14,
-  "Pvt Bank": 10,
-  "PSU Bank": 12,
-  "Fin Services": 20,
-  "Auto": 15,
-  "Pharma": 20,
-  "Healthcare": 20,
-  "FMCG": 15,
-  "Metal": 15,
-  "Realty": 10,
-  "Energy": 40,
-  "Oil & Gas": 15,
-  "Infra": 30,
-  "PSE": 20,
-  "Media": 10,
-  "Consumption": 30,
-  "Defence": 22
- },
- "nse_days": 762,
- "nse_last": "2026-11-13",
- "benchmark": "NSE: Nifty 50",
- "rrg_indices": 48,
- "sectors_ok": 18,
- "stock_rrg_sectors": 18,
- "telegram": {
-  "token_set": true,
-  "chat_set": true,
-  "token_shape_ok": true,
-  "getMe_ok": true,
-  "bot": "SectorRotateBot",
-  "send_status": 200,
-  "photo_status": 200
+ "missing_prices": [
+  "ADROITIND",
+  "GSPLTRANS",
+  "SWASTIKAIN"
+ ],
+ "asof": "13 Nov 2026",
+ "priced": 1812,
+ "universe": 1815,
+ "groups": {
+  "sector": 22,
+  "industry": 165,
+  "theme": 101
  }
 }
