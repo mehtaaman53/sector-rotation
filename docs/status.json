@@ -6,6 +6,7 @@
   "NIFTY MIDCAP 150": "NSE: Nifty Midcap 150",
   "NIFTY SMALLCAP 250": "NSE: Nifty Smallcap 250"
  },
+ "price_src": "Yahoo (market-data repo nahi mila)",
  "missing_prices": [
   "ADROITIND",
   "GSPLTRANS",
