@@ -87,6 +87,20 @@ def fetch_prices(syms, period="4y", chunk=60):
     return close.sort_index(), vol.sort_index()
 
 
+def yahoo_action_after(sym, day, ratio):
+    """Yahoo ke hisaab se `day` ke baad split/bonus/dividend hua? (sirf un stocks ke liye jinka jod nahi mila)"""
+    try:
+        import yfinance as yf
+        a = yf.Ticker(yahoo_ticker(sym)).actions
+        if a is None or a.empty:
+            return False
+        a.index = pd.to_datetime(a.index).tz_localize(None).normalize()
+        a = a[a.index > day]
+        return bool(((a.get("Dividends", 0) > 0) | (a.get("Stock Splits", 0) > 0)).any())
+    except Exception:
+        return abs(ratio - 1) < 0.15     # check na ho paaye: chhota fark (dividend) maan lo, bada fark mat jodo
+
+
 def fetch_benchmarks():
     """Pehle NSE official (data/nse_indices.csv), na mile to Yahoo."""
     out, src = {}, {}
@@ -545,15 +559,29 @@ def main():
             status["yahoo_filled"] = len(todo)
             if todo:
                 print(f"Yahoo se bharna: {len(todo)} stocks (Fyers mein nahi / purana)")
-                yc, yv = fetch_prices(todo, period="1mo" if not miss or len(todo) > len(miss) else "4y")
+                yc, yv = fetch_prices(todo, period="3mo" if not miss or len(todo) > len(miss) else "4y")
                 if miss:
                     mc, mv = fetch_prices(miss, period="4y")
                     yc = yc.combine_first(mc) if not yc.empty else mc
                     yv = yv.combine_first(mv) if not yv.empty else mv
+                joined, skipped = [], []
                 for s in yc.columns:
                     new = yc[s].dropna()
                     if s in close.columns:
                         lv = close[s].last_valid_index()
+                        if lv is not None and new[new.index > lv].size and lv in new.index and close.at[lv, s] > 0:
+                            # Jod wale din Fyers aur Yahoo ka price milao. Beech mein split/bonus/dividend hua ho
+                            # to Yahoo ne purane din adjust kar diye honge -> Fyers history ko usi ratio se adjust karo
+                            ratio = float(new.at[lv] / close.at[lv, s])
+                            if abs(ratio - 1) > 0.005:
+                                if yahoo_action_after(s, lv, ratio):
+                                    close.loc[:lv, s] = close.loc[:lv, s] * ratio
+                                    if abs(ratio - 1) > 0.15 and s in vol.columns:   # split/bonus: volume bhi
+                                        vol.loc[:lv, s] = vol.loc[:lv, s] / ratio
+                                    joined.append(f"{s} x{ratio:.3f}")
+                                else:   # koi corporate action nahi, phir bhi fark = Yahoo galat. Fyers hi rakho.
+                                    skipped.append(s)
+                                    continue
                         new = new[new.index > lv] if lv is not None else new
                     if new.empty:
                         continue
@@ -562,6 +590,9 @@ def main():
                     close.loc[new.index, s] = new.values
                     if s in yv.columns:
                         vol.loc[new.index, s] = yv[s].reindex(new.index).values
+                status["yahoo_join_adjusted"], status["yahoo_join_skipped"] = joined, skipped
+                if joined or skipped:
+                    print(f"Jod adjust: {joined}  |  Yahoo galat, chhoda: {skipped}")
             status["bench_src"] = {k: "Fyers" for k in bench.columns}
         else:
             # 2) Backup: Yahoo + NSE
