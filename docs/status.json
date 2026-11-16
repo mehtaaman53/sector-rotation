@@ -23,7 +23,7 @@
   "KESORAMIND": 1,
   "ADVANIHOTR": 2
  },
- "yahoo_filled": 4,
+ "yahoo_filled": 1815,
  "yahoo_join_adjusted": [],
  "yahoo_join_skipped": [],
  "bench_src": {
@@ -33,7 +33,7 @@
   "NIFTY SMALLCAP 250": "Fyers"
  },
  "missing_prices": [],
- "asof": "13 Nov 2026",
+ "asof": "16 Nov 2026",
  "priced": 1815,
  "universe": 1815,
  "groups": {
