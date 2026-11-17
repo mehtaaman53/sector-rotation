@@ -2,7 +2,7 @@
  "mode": "live",
  "price_src": "Fyers (market-data)",
  "fyers_stocks": 1812,
- "fyers_last": "2026-11-13",
+ "fyers_last": "2026-11-17",
  "demerger_adjusted": {
   "EDELWEISS": 1,
   "STAR": 1,
@@ -16,14 +16,14 @@
   "BBL": 2,
   "AJMERA": 1,
   "BCG": 1,
-  "BNAGROCHEM": 1,
+  "BNAGROCHEM": 2,
   "NIITLTD": 1,
   "ABINFRA": 1,
   "SUMEETINDS": 1,
   "KESORAMIND": 1,
   "ADVANIHOTR": 2
  },
- "yahoo_filled": 1815,
+ "yahoo_filled": 5,
  "yahoo_join_adjusted": [],
  "yahoo_join_skipped": [],
  "bench_src": {
@@ -33,7 +33,7 @@
   "NIFTY SMALLCAP 250": "Fyers"
  },
  "missing_prices": [],
- "asof": "16 Nov 2026",
+ "asof": "17 Nov 2026",
  "priced": 1815,
  "universe": 1815,
  "groups": {
