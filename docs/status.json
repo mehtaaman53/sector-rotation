@@ -24,7 +24,10 @@
   "ADVANIHOTR": 2
  },
  "yahoo_filled": 1815,
- "yahoo_join_adjusted": [],
+ "yahoo_join_adjusted": [
+  "AKCAPIT x0.991",
+  "INGERRAND x0.995"
+ ],
  "yahoo_join_skipped": [],
  "bench_src": {
   "NIFTY 50": "Fyers",
@@ -33,7 +36,7 @@
   "NIFTY SMALLCAP 250": "Fyers"
  },
  "missing_prices": [],
- "asof": "18 Nov 2026",
+ "asof": "19 Nov 2026",
  "priced": 1815,
  "universe": 1815,
  "groups": {
