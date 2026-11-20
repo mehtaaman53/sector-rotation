@@ -2,7 +2,7 @@
  "mode": "live",
  "price_src": "Fyers (market-data)",
  "fyers_stocks": 1812,
- "fyers_last": "2026-11-17",
+ "fyers_last": "2026-11-20",
  "demerger_adjusted": {
   "EDELWEISS": 1,
   "STAR": 1,
@@ -15,6 +15,7 @@
   "JSLL": 1,
   "BBL": 2,
   "AJMERA": 1,
+  "ELCIDIN": 1,
   "BCG": 1,
   "BNAGROCHEM": 2,
   "NIITLTD": 1,
@@ -23,11 +24,8 @@
   "KESORAMIND": 1,
   "ADVANIHOTR": 2
  },
- "yahoo_filled": 1815,
- "yahoo_join_adjusted": [
-  "AKCAPIT x0.991",
-  "INGERRAND x0.995"
- ],
+ "yahoo_filled": 9,
+ "yahoo_join_adjusted": [],
  "yahoo_join_skipped": [],
  "bench_src": {
   "NIFTY 50": "Fyers",
@@ -36,7 +34,7 @@
   "NIFTY SMALLCAP 250": "Fyers"
  },
  "missing_prices": [],
- "asof": "19 Nov 2026",
+ "asof": "20 Nov 2026",
  "priced": 1815,
  "universe": 1815,
  "groups": {
